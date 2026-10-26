@@ -381,20 +381,33 @@ public final class TeaItems {
                             java.util.Set.of(POTTER_WHEEL)));
 
     /**
-     * 妞呭瓙搴т綅瀹炰綋銆?
+     * 椅子座位实体。
      *
-     * <p>鍧愪笅蹇呴』闈犮€岄獞涔樹竴涓疄浣撱€嶅疄鐜帮紝鏂瑰潡鏈韩褰撲笉浜嗚浇鍏枫€傛墍浠ユ瀛愭湁绌烘墜
-     * 鍙抽敭鏃剁敓鎴愯繖涓笉鍙瀹炰綋锛岀帺瀹堕獞涓婂幓灏辫鍥哄畾鍦ㄥ骇闈㈤珮搴︺€?/p>
+     * <p>坐下必须靠「骑乘一个实体」实现，方块本身当不了载具。所以椅子有空手
+     * 右键时生成这个不可见实体，玩家骑上去就被固定在座面高度。</p>
      *
-     * <p>{@code createNothing} + {@code sized} + {@code noSummon}锛?
-     * 涓嶈兘鐢?/summon 鍒峰嚭鏉ワ紝涔熶笉鍙備笌鑷劧鐢熸垚銆?/p>
+     * <h2>必须用 of(TeaSeatEntity::new, ...)，不能用 createNothing</h2>
+     * <p>{@code createNothing} 的工厂 lambda 返回 null。服务端我们用
+     * {@code new TeaSeatEntity(...)} 绕过了它，所以服务端看起来没问题；但客户端
+     * 收到生成包后必须靠 EntityType 的工厂重建实体：</p>
+     * <pre>
+     *   EntityType.create(Level, EntitySpawnRequest)
+     *     -&gt; return this.factory.create(this, level);   // createNothing 这里给 null
+     * </pre>
+     * <p>结果：客户端根本没有载具实体，玩家一坐上去立刻被甩下来。
+     * 这就是「自检全绿但游戏里坐不住」的原因 —— 自检跑在服务端，
+     * 永远走不到客户端重建这条路。</p>
+     *
+     * <p>另外 {@code noSave()} 会把 serialize 置 false，
+     * startRiding 直接返回 false（连坐都坐不上）。</p>
      */
     public static final EntityType<com.heishandashu.teacraft.block.TeaSeatEntity> SEAT_TYPE =
             Registry.register(
                     net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE,
                     TeaCraft.id("tea_seat"),
                     net.minecraft.world.entity.EntityType.Builder
-                            .<com.heishandashu.teacraft.block.TeaSeatEntity>createNothing(
+                            .<com.heishandashu.teacraft.block.TeaSeatEntity>of(
+                                    com.heishandashu.teacraft.block.TeaSeatEntity::new,
                                     net.minecraft.world.entity.MobCategory.MISC)
                             .sized(0.0F, 0.0F)
                             .noSummon()
