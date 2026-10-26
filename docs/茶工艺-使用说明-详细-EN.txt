@@ -1,0 +1,836 @@
+================================================================================
+Tea Craft —— Complete User Guide (English)
+================================================================================
+
+Author: bilibili 黑山大叔 (Heishandashu)   https://space.bilibili.com/19428259
+
+Supported versions
+  26.3   Fabric       tea-craft-fabric-26.3-1.4.12.jar
+  26.3   NeoForge     tea-craft-neoforge-26.3-1.4.12.jar
+  1.21.1 NeoForge     tea-craft-neoforge-1.21.1-1.1.6.jar
+
+This guide has four parts:
+  Part 1  Getting started (seeds, planting)
+  Part 2  Working blocks (8 of them, how to use each)
+  Part 3  Tea effects (what each of the three teas does, and for how long)
+  Part 4  Furniture and teaware (table, chair, box, tray, kettle)
+  Appendix  Recipe reference, troubleshooting
+
+
+================================================================================
+Part 1  Getting Started
+================================================================================
+
+--------------------------------------------------------------------------------
+1.1 Obtaining a tea seed
+--------------------------------------------------------------------------------
+
+Tea seeds cannot be crafted. The only way to get one is to kill zombies.
+
+  A zombie may spawn holding a tea seed in its main hand.
+  When killed, it ALWAYS drops the seed.
+
+  Probability (identical to "zombie holding an iron shovel",
+  derived by decompiling vanilla):
+
+    Hard difficulty     5%  x 4/6  =  3.33%
+    Other difficulties  1%  x 4/6  =  0.67%
+
+  In practice: on Peaceful/Easy/Normal you need roughly 150 zombies per seed;
+  on Hard, roughly 30.
+
+  Note: holding the seed does not matter — we deliberately set it to
+  "always drops on death" instead of the vanilla 8.5% equipment drop rate.
+
+--------------------------------------------------------------------------------
+1.2 Planting: temperature is everything
+--------------------------------------------------------------------------------
+
+Plant the tea seed on grass or dirt. It goes through 4 stages:
+
+  age 0  Seedling       just planted
+  age 1  Growing        random-tick growth (bonemeal works)
+  age 2  Grown          full one block tall (bonemeal caps here)
+  age 3  Harvestable    tender green leaves appear at the top
+                        ONLY time advances past age 2 — bonemeal does nothing
+
+  Important design note: bonemeal can speed up growth to a full bush,
+  but it cannot produce harvestable leaves. You must wait for the timer.
+  Those tender leaves at the top are the "ready" visual cue.
+
+  Growth time (from planting to fully grown):
+    Hottest biome   3 in-game days
+    Coldest biome   8 in-game days
+    Linear interpolation by temperature in between
+
+--------------------------------------------------------------------------------
+1.3 Biome temperature -> tea quality (the most important table)
+--------------------------------------------------------------------------------
+
+At harvest time the leaves remember the biome they grew in.
+That temperature decides the finished tea's QUALITY TIER,
+and the tier decides the EFFECT DURATION.
+
+  Biome temperature      Tier    Duration
+  ---------------------  ------  -----------
+  Tropical    >=  1.10   1       20 minutes
+  Subtropical >=  0.85   2       40 minutes
+  Temperate   >=  0.55   3       60 minutes
+  Boreal      >=  0.15   4       80 minutes
+  Polar       <   0.15   5      100 minutes
+
+  The colder the biome, the better the tea.
+
+  Origin information travels with the leaves the whole way:
+  harvest -> every processing step -> finished tea -> brewed tea.
+  It will never silently reset to "Temperate" during processing.
+
+--------------------------------------------------------------------------------
+1.4 Boreal and Polar biomes: you need a campfire
+--------------------------------------------------------------------------------
+
+Tea bushes in Boreal (tier 4) and Polar (tier 5) biomes need a CAMPFIRE
+within a 2-block radius.
+
+  No campfire  ->  the bush does not grow.
+  Walk up to it and you will see: "It's too cold — put a campfire nearby."
+
+  The campfire must be lit.
+
+  This is the price of high-tier tea: the good stuff does not grow
+  in comfortable places.
+
+--------------------------------------------------------------------------------
+1.5 Harvesting
+--------------------------------------------------------------------------------
+
+Right-click a fully grown bush (age 3).
+
+  1 to 3 fresh leaves per harvest (random).
+  The bush returns to age 2 and you can wait for the next flush.
+
+  Fresh leaves come in 5 item variants by origin:
+    Tropical / Subtropical / Temperate / Boreal / Polar leaves
+
+  Fresh leaves cannot be eaten. The message "Finished tea can't be eaten
+  directly — put it in a gaiwan and add water" also appears for fresh
+  leaves, because they belong to the same item family.
+  Their only use is going into a drying tray to start processing.
+
+
+================================================================================
+Part 2  Working Blocks
+================================================================================
+
+There are 8 processing blocks plus 5 furniture/teaware blocks (Part 4).
+
+  Processing: tea bush / drying tray / rolling tray / tea wok /
+              charcoal stove / clay kiln / potter's wheel / kettle
+  Furniture:  tea table / hot tea table / tea chair / tea box / tea set
+
+  Every processing block holds up to 32 tea items at once.
+  The tea box is the exception (storage, 999 per slot).
+
+
+================================================================================
+2.1 Drying Tray
+================================================================================
+
+Purpose  Step one: dry fresh leaves into "withered leaves". Shared by all
+         three production chains. Also handles shaking (Dancong only)
+         and Dancong's kill-green step.
+
+Recipe   3 wooden slabs + 3 planks (see appendix)
+
+[Inserting]
+  Right-click the tray while holding fresh leaves.
+  It inserts the WHOLE STACK: whatever you are holding, up to the 32 cap.
+  The tray only accepts one origin and one stage at a time
+  (mixing is rejected).
+
+[Drying]
+  Wait 5 minutes (6000 ticks).
+  Look at the tray to see a progress bar:
+    "Drying Tray · Withering  45%"
+
+  After 5 minutes it becomes "withered".
+
+  Rain pauses drying.
+    Condition: open sky + raining -> progress freezes (it does not reset).
+    A block above the tray blocks the rain, so you can build a roof
+    and keep drying.
+
+[Removing]
+  Right-click with an empty hand to take the tea out
+  (it becomes a "withered leaves" item).
+
+  Note: all three chains share this single "withered leaves" item.
+  Which block you put it into next decides the route.
+
+[Extra: shaking + kill-green for Phoenix Dancong]
+  Dancong's steps 2 and 3 both happen on the drying tray.
+
+  Step one: shaking
+    Sneak + hold right-click for 3 seconds -> one shake.
+    Three shakes total.
+
+    While shaking the screen shows:
+      "Drying Tray · Shaking"
+      "After this shake: 2 / 3"
+      "Progress 67%"
+
+    After 3 shakes -> "shaken leaves" (dancong_3_shaking).
+
+    Only withered Dancong leaves can be shaken. Shaking fresh leaves
+    tells you to dry them first.
+
+  Step two: kill-green
+    Put the shaken leaves BACK on the drying tray and wait 5 minutes.
+    They become "kill-green leaves" (dancong_4_killgreen).
+
+    Note: Dancong's kill-green happens on the TRAY, not in the wok.
+    This differs from green tea, where kill-green needs the wok.
+
+
+================================================================================
+2.2 Rolling Tray
+================================================================================
+
+Purpose  Rolling (green tea, black tea) and fermentation (all chains).
+         Phoenix Dancong skips rolling — leaves go straight to fermentation.
+
+Recipe   3 wooden slabs + 2 wooden fences
+
+[Inserting]
+  Right-click while holding the correct stage. Whole stack, up to 32.
+  No mixing origins or stages.
+
+[Rolling]
+  Sneak + hold right-click for 3 seconds -> one roll.
+  Three rolls total, 3 seconds each.
+
+  The screen shows:
+    "Rolling Tray · Rolling"
+    "Roll 2 / 3  33%"
+
+  After 3 rolls it moves to the fermentation stage.
+
+  Dancong exception: Dancong leaves are NOT rolled. They start
+  fermenting immediately, because traditional Dancong processing has
+  no rolling step. The message reads "Rolling complete, leaving to ferment".
+
+[Fermentation]
+  Fermentation starts automatically after rolling and takes 30 seconds
+  (600 ticks). During this the screen shows "Fermenting 62%".
+
+  Do not try to roll during fermentation — you get
+  "Fermenting, please wait".
+
+[Removing]
+  After fermentation completes, right-click with an empty hand.
+
+    Green/Black -> "fermented leaves" or "rolled leaves"
+                   (depending on the chain)
+    Dancong     -> "fermented Dancong leaves"
+
+  Green tea is special: green tea does NOT ferment.
+  After 3 rolls you get "rolled leaves" and nothing else happens.
+  That is intentional — green tea stops here and goes to the wok for drying.
+
+[How to tell if fermentation finished]
+  Right-click with an empty hand:
+    "Fermenting, please wait"        -> not done yet
+    "Already fermented, right-click to take" -> done, click again to take
+
+
+================================================================================
+2.3 Tea Wok
+================================================================================
+
+Purpose  Kill-green, drying, and first-bake. The second most-used block.
+
+  Exactly three inputs are accepted (from the source):
+    Withered leaves (green tea)  -> kill-green leaves   (green step 1)
+    Rolled leaves (green tea)    -> dried leaves        (green step 2)
+    Fermented leaves (black tea) -> first-bake leaves   (black step 1)
+
+  Dancong does NOT go into the wok. Dancong's kill-green happens on
+  the drying tray. Putting Dancong leaves in gives
+  "The wok only accepts rolled tea".
+
+Recipe   Iron block + wooden slab (see appendix)
+
+[Inserting tea]
+  Right-click the wok to open its GUI,
+  or right-click while holding the tea (goes into the input slot).
+  Up to 32 items. Accepts rolled tea only.
+
+[Adding fuel]
+  Stirring needs charcoal. Put charcoal in the fuel slot.
+  Each stir consumes 1 charcoal.
+
+[Stirring]
+  Sneak + right-click -> stir once.
+  Three stirs total.
+
+  Messages:
+    "Stirred 8 items"
+    "Stirring... keep sneak-right-clicking (3 total)"
+    "Stirring complete"
+
+  Each stir processes 8 items. If you loaded 32, you need 4 rounds
+  (3 stirs each). Large batches are click-heavy — batch it in smaller
+  amounts if you value your wrist.
+
+[Notes]
+  "The wok only accepts rolled tea" — wrong stage is rejected.
+  "No charcoal in the wok, can't stir" — add fuel first.
+
+
+================================================================================
+2.4 Charcoal Stove
+================================================================================
+
+Purpose  The final step: turn "last-stage" tea into finished tea.
+         All three chains pass through here.
+
+  Exactly three inputs are accepted (from the source):
+    Dried leaves (green tea)     -> finished green tea
+    First-bake leaves (black)    -> finished black tea
+    Fermented leaves (Dancong)   -> finished Phoenix Dancong
+
+  Only last-stage tea is accepted. Putting tea in too early is rejected.
+  (The message "The stove only accepts fermented tea" was written for
+   the black tea path but applies to all three.)
+
+Recipe   3 wooden slabs + 2 wooden fences (similar to the rolling tray)
+
+[Inserting tea]
+  Right-click to open the GUI.
+  Accepts only last-stage tea.
+
+[Adding fuel]
+  Put charcoal in the fuel slot. Each charcoal burns for 1600 ticks (80 s).
+
+[Baking]
+  Processes 8 items at a time and takes 30 seconds (600 ticks).
+  Progress is visible in the GUI.
+
+[Notes]
+  "The stove only accepts fermented tea"
+  "There is already other tea in the stove" — one kind at a time
+  "Fuel is full (64 charcoal)"
+
+
+================================================================================
+2.5 Clay Kiln + Potter's Wheel
+================================================================================
+
+These two must be placed as a PAIR. The kiln sits directly next to the
+potter's wheel, and blanks are sent from the wheel straight into the kiln.
+
+  Placing them apart gives "Must be placed next to the potter's wheel".
+
+[Using the potter's wheel]
+  1. Right-click the wheel while holding clay balls -> into the blank slot
+  2. Choose what to make in the GUI (pattern list):
+       Tea cup       1 clay ball
+       Gaiwan        2 clay balls
+       Kettle        4 clay balls
+  3. The finished blank is sent automatically into the adjacent kiln
+
+[Using the kiln]
+  1. Put coal or charcoal in the fuel slot
+     One firing consumes 8 fuel items (coal or charcoal both count)
+  2. One firing takes ONE IN-GAME DAY = 20 minutes of real time
+     This really is 20 minutes, not a few seconds.
+     Progress advances only with game ticks, so it does not finish
+     while you are offline or the chunk is unloaded
+     (same as the vanilla furnace).
+     The kiln is designed for "load it and go do something else".
+  3. Take the finished item from the output slot
+
+  The kiln has 6 blank slots and 6 output slots, so it can fire 6 items
+  in parallel.
+
+
+================================================================================
+2.6 Kettle
+================================================================================
+
+Purpose  Boil water and pour it to brew tea. Required for brewing.
+
+Recipe   See appendix (must be fired in a kiln)
+
+[Filling with water]
+  Right-click the kettle while holding a water bucket or water bottle.
+    Water bucket  -> consumes the bucket, returns an empty bucket
+    Water bottle  -> consumes the bottle, returns a glass bottle
+
+[Heating]
+  Place the kettle on a HEAT SOURCE:
+    - Magma block
+    - Lit campfire
+    - Lit furnace
+    - Hot tea table (see Part 4)
+
+  Boils in 5 seconds (100 ticks).
+  White steam comes out of the spout when boiling.
+
+  Look at it to check status:
+    "Kettle · Empty"
+    "Kettle · Boiling 45%"
+    "Kettle · Boiled water"
+
+[Brewing]
+  Hold the kettle with boiled water and right-click a TEA TRAY
+  that has dry tea in its gaiwan.
+  -> dry tea becomes brewed tea.
+
+  Each portion of dry tea yields 1 cup.
+  So 3 portions -> 3 cups.
+
+  Messages:
+    "The kettle is empty — fill it and boil first"
+    "Put tea leaves in the gaiwan before brewing"
+
+NOTE: the TEAPOT is decorative and cannot boil water
+  There is also a "Teapot" in the mod. It is purely decorative.
+  Right-clicking it gives "This is a decorative teapot — use the
+  'Kettle' if you want to boil water".
+  The two models look similar; do not grab the wrong one.
+
+
+================================================================================
+Part 3  Tea Effects
+================================================================================
+
+Each of the three teas has a different effect.
+All durations depend on QUALITY: 20/40/60/80/100 minutes.
+
+--------------------------------------------------------------------------------
+3.1 Green Tea -> Speed II + calming creepers and undead
+--------------------------------------------------------------------------------
+
+  Effect: Speed II (+40% movement speed)
+  Duration: 20/40/60/80/100 minutes by quality
+
+  Extra effect (unique to green tea):
+    Within a 32-block radius, CREEPERS and UNDEAD mobs that are
+    targeting you LOSE THEIR TARGET and stop attacking you.
+
+    Creepers: creepers
+    Undead: zombies, skeletons, zombified piglins, wither skeletons,
+            phantoms, etc.
+
+    This does not make them vanish or friendly — they simply stop
+    chasing you. If you hit them, they will fight back.
+
+  Use case: caving, travelling, doing dangerous work.
+
+--------------------------------------------------------------------------------
+3.2 Black Tea -> Regeneration II + 90% less hunger drain
+--------------------------------------------------------------------------------
+
+  Effect: Regeneration II (1 health every 2 seconds)
+  Duration: 20/40/60/80/100 minutes
+
+  Extra effect:
+    HUNGER DRAIN REDUCED BY 90%
+    Sprinting, mining and fighting consume only 1/10 of the normal
+    saturation/exhaustion.
+
+    This reduces drain; it does not refill hunger. Food lasts much
+    longer, but an empty bar is still empty.
+
+  Use case: long work sessions, AFK, long-distance travel.
+
+--------------------------------------------------------------------------------
+3.3 Phoenix Dancong -> Haste IX + no phantoms
+--------------------------------------------------------------------------------
+
+  Effect: Haste IX
+    amplifier 8 = Haste IX
+
+    That is a very high level; mining speed increases substantially.
+    (For reference: a fully powered beacon gives Haste II.)
+
+  Duration: 20/40/60/80/100 minutes
+
+  Extra effect:
+    Phantoms neither attack you nor spawn.
+
+    Implementation: the player's TIME_SINCE_REST statistic is
+    continuously reset to zero. Vanilla uses exactly that stat to
+    decide whether phantoms spawn on rainy nights. Zero means
+    "just slept", so spawning never triggers.
+
+    Phantoms already nearby (within 48 blocks) forget you as a target.
+
+  Use case: players who never sleep, night activity, big mining projects.
+
+--------------------------------------------------------------------------------
+3.4 How to drink tea
+--------------------------------------------------------------------------------
+
+  Finished tea CANNOT be eaten by right-clicking it.
+  Doing so gives: "Finished tea can't be eaten directly — put it in a
+  gaiwan and add water".
+
+  The correct full flow:
+
+    1. Place a tea tray on the ground (or on a tea table)
+    2. Right-click the tray with a gaiwan   -> places the gaiwan
+    3. Right-click the tray with tea cups    -> places cups (up to 3)
+    4. Right-click the tray with finished tea -> dry tea into the gaiwan
+                                                (up to 3 portions)
+    5. Fill the kettle, put it on a heat source, boil
+    6. Right-click the tray with the boiling kettle -> water in,
+       dry tea becomes brewed tea
+    7. Right-click the gaiwan on the tray to pour brewed tea into a cup
+    8. Right-click the cup -> drink
+
+  Every step gives feedback. If you get stuck, read the text near
+  your crosshair.
+
+  Can you skip the tray and drink straight from the gaiwan?
+    No. Brewed tea must pass through the tray to reach the cups.
+    To drink in the field, carry a gaiwan + a cup + a tea tray.
+
+
+================================================================================
+Part 4  Furniture and Teaware
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 Tea Table
+--------------------------------------------------------------------------------
+
+  A full block with a flat top. A tea tray sits flush on the surface,
+  not floating.
+
+  Recipe: 3 logs + 2 planks
+
+--------------------------------------------------------------------------------
+4.2 Hot Tea Table
+--------------------------------------------------------------------------------
+
+  A tea table with a magma block embedded in the centre. Put a kettle
+  on it and it heats like it is sitting on magma — water boils
+  automatically.
+
+  It does NOT burn the player. Safe to stand on.
+
+  Recipe: tea table + magma block (shapeless, irreversible)
+  IRREVERSIBLE: breaking it drops "Hot Tea Table"; it does not
+  convert back into a normal tea table.
+
+--------------------------------------------------------------------------------
+4.3 Tea Chair
+--------------------------------------------------------------------------------
+
+  A sittable chair. Places in all four directions.
+
+  Right-click with an empty hand -> sit
+  Sneak + right-click            -> stand up
+
+  The collision box only reaches seat height (about 0.59 blocks).
+  The backrest has no collision, so you can walk through it from behind.
+
+  While seated you can still interact with teaware on the tea table —
+  no need to stand up.
+
+  Recipe: 3 planks + 2 fences
+
+--------------------------------------------------------------------------------
+4.4 Tea Box
+--------------------------------------------------------------------------------
+
+  A wooden box for storing finished tea.
+
+  Capacity: 27 slots, up to 999 of the same tea per slot
+
+  Operations:
+    Right-click while holding tea   -> store directly (no GUI needed)
+    Right-click                     -> open the GUI
+    Left-click a slot in the GUI    -> take 3
+    Right-click a slot in the GUI   -> take 64
+    Shift-click a slot in the GUI   -> take the whole slot
+    Sneak + right-click             -> pick up the WHOLE BOX
+                                       (tea comes with it)
+
+  Only finished tea is accepted. Fresh leaves and intermediate
+  products cannot go in.
+
+  If your inventory is full you cannot pick up the box:
+  "Inventory is full — cannot pick up the tea box".
+
+  What if you just break the box?
+    The box drops with all its tea inside. Pick it up, place it again,
+    the tea is still there.
+    (Creative mode drops nothing, same as vanilla.)
+
+  Recipe: 8 wooden slabs in a ring
+
+  Model: a flat wooden box 7 pixels tall with a 3x3 decorative lid.
+
+--------------------------------------------------------------------------------
+4.5 Tea Tray + Gaiwan + Tea Cups
+--------------------------------------------------------------------------------
+
+  The most involved set, and the core of the tea experience.
+
+[Tea Tray]
+  A shallow wooden tray holding 1 gaiwan and up to 3 tea cups.
+
+  Recipe: wooden slab + bamboo
+
+[Placing the gaiwan]
+  Right-click the tray while holding a gaiwan.
+
+[Placing cups]
+  Right-click the tray while holding a tea cup.
+  Up to 3 cups, filling 3 positions in order.
+
+[Adding dry tea]
+  Right-click the tray while holding finished tea ->
+  dry tea goes into the gaiwan (up to 3 portions).
+  Each portion = 1 cup of brewed tea.
+
+[Pouring water]
+  Right-click the tray with a kettle of boiling water ->
+  dry tea becomes brewed tea.
+
+[Pouring into a cup]
+  Right-click the gaiwan position on the tray ->
+  brewed tea moves into an empty cup.
+
+[Drinking]
+  Right-click a cup containing brewed tea -> drink.
+  -> gain the full effect of that tea (duration by brew quality).
+
+[Taking teaware back]
+  Right-click a piece of teaware with an empty hand -> take that piece.
+
+[Taking the whole tray]
+  Sneak + right-click -> take the entire tray
+  (including gaiwan, cups and any brewed tea).
+
+  Plain right-click on the tray rim (not on a piece of teaware)
+  does NOTHING. This prevents accidental pickups.
+  This was an explicit requirement: "if the tea tray is on a tea table,
+  you should only be able to pick it up while sneaking".
+
+  On a tea table the rule is the same: interacting with teaware works
+  normally, but picking up the tray needs sneak.
+
+[Tray status readout]
+  Looking at the tray shows:
+    Empty tea tray
+    Teaware: gaiwan yes · cups 2
+    Gaiwan dry tea: Phoenix Dancong · quality 4 · 2 portions
+    Gaiwan brew: Phoenix Dancong · quality 4 · 2 cups left
+    Cup 1: Phoenix Dancong · quality 4
+
+  This lets you see the tray contents without opening any GUI.
+
+--------------------------------------------------------------------------------
+4.6 "Tea Craft Guide" (in-game book)
+--------------------------------------------------------------------------------
+
+  Recipe: tea seed + book (shapeless)
+
+  Right-click to open. 11 pages covering bushes, processing,
+  brewing, teaware, machines and furniture.
+
+  Page turning:
+    Click the arrows in the GUI
+    Mouse wheel
+    Left/Right arrow keys
+    A / D keys
+
+  Caution: some pages in the in-game book describe an older version of
+  the processing chains and differ from the current implementation.
+  This guide (the one you are reading) was written directly against
+  the source code and is authoritative.
+
+
+================================================================================
+Appendix A  Recipe Reference
+================================================================================
+
+  Item                 Recipe
+  -------------------  --------------------------------------------
+  Tea seed             tea seed (or fresh leaves) + dirt  -> shapeless
+  Tea Craft Guide      tea seed + book                   -> shapeless
+  Drying tray          3 wooden slabs + 3 planks
+  Rolling tray         3 wooden slabs + 2 wooden fences
+  Tea wok              iron block + wooden slab          -> see in-game
+  Charcoal stove       3 wooden slabs + 2 wooden fences
+  Clay kiln            8 bricks in a ring (crafting table)
+  Potter's wheel       3 wooden slabs + 2 wooden fences
+  Tea table            3 logs + 2 planks
+  Hot tea table        tea table + magma block           -> shapeless, irreversible
+  Tea chair            3 planks + 2 fences
+  Tea box              8 wooden slabs in a ring (hollow centre)
+  Tea tray             wooden slab + bamboo (#B# shape)
+  Teapot (decorative)  see in-game book
+  Kettle               see in-game book (must be fired)
+
+  Exact shapes may differ slightly. Use the in-game recipe book for
+  the precise layout; the above is a quick reference.
+
+
+================================================================================
+Appendix B  Complete Processing Chains (verified against source)
+================================================================================
+
+All three chains share step 2, "withered leaves" (item id: spread_2_withered).
+Which block you put it into decides the route:
+
+    Into the TEA WOK         -> Green tea
+    Into the ROLLING TRAY    -> Black tea
+    Back onto the DRYING TRAY to shake -> Phoenix Dancong
+
+This is the fork in the road for the entire mod.
+
+--------------------------------------------------------------------------------
+Green Tea
+--------------------------------------------------------------------------------
+  Fresh leaves
+   |  drying tray (5 minutes)
+  Withered leaves      spread_2_withered
+   |  tea wok (3 stirs, 1 charcoal each)          <- kill-green
+  Kill-green leaves    green_3_killgreen
+   |  rolling tray (3 rolls, 3 seconds each)
+  Rolled leaves        green_4_rolling
+   |  tea wok (3 stirs)                           <- drying
+  Dried leaves         green_5_drying
+   |  charcoal stove (1 bake, 30 seconds, charcoal)
+  Finished green tea   green_6_finished
+
+  Effect: Speed II + creepers/undead stop attacking
+
+  Note: green tea does NOT ferment. Rolled leaves never move on to
+  fermentation. That is intentional.
+
+--------------------------------------------------------------------------------
+Black Tea
+--------------------------------------------------------------------------------
+  Fresh leaves
+   |  drying tray (5 minutes)
+  Withered leaves      spread_2_withered
+   |  rolling tray (3 rolls)
+  Rolled leaves        black_3_rolling
+   |  rolling tray (wait 30 seconds to ferment, do not roll)
+  Fermented leaves     black_4_fermenting
+   |  tea wok (3 stirs)                           <- first bake
+  First-bake leaves    black_5_firstbake
+   |  charcoal stove (1 bake)
+  Finished black tea   black_6_finished
+
+  Effect: Regeneration II + 90% less hunger drain
+
+--------------------------------------------------------------------------------
+Phoenix Dancong
+--------------------------------------------------------------------------------
+  Fresh leaves
+   |  drying tray (5 minutes)
+  Withered leaves      spread_2_withered
+   |  drying tray again (sneak + hold right-click 3 s, 3 shakes)  <- shaking
+  Shaken leaves        dancong_3_shaking
+   |  drying tray again (wait 5 more minutes)     <- kill-green (on the tray)
+  Kill-green leaves    dancong_4_killgreen
+   |  rolling tray (ferments immediately, no rolling, 30 s)
+  Fermented leaves     dancong_6_roasting
+   |  charcoal stove (1 bake)
+  Finished Dancong     dancong_8_finished
+
+  Effect: Haste IX + phantoms do not spawn and do not attack
+
+  Notes:
+    Dancong's kill-green happens on the DRYING TRAY, not in the wok.
+    Dancong has no rolling step; kill-green leaves ferment directly.
+    Dancong's final bake uses the CHARCOAL STOVE, not the wok.
+
+--------------------------------------------------------------------------------
+Which block accepts what
+--------------------------------------------------------------------------------
+  Block            Accepts              Produces              Note
+  ---------------  -------------------  --------------------  -----------
+  Drying tray      fresh leaves         withered leaves       5 minutes
+  Drying tray      withered (Dancong)   shaken leaves         3 shakes
+  Drying tray      shaken leaves        kill-green leaves     5 more min
+  Rolling tray     withered (black)     rolled leaves         3 rolls
+  Rolling tray     rolled (black)       fermented leaves      30 s wait
+  Rolling tray     kill-green (Dancong) fermented leaves      no rolling
+  Tea wok          withered (green)     kill-green leaves     3 stirs
+  Tea wok          rolled (green)       dried leaves          3 stirs
+  Tea wok          fermented (black)    first-bake leaves     3 stirs
+  Charcoal stove   dried (green)        finished green tea    30 s bake
+  Charcoal stove   first-bake (black)   finished black tea    30 s bake
+  Charcoal stove   fermented (Dancong)  finished Dancong      30 s bake
+  Clay kiln        clay blank           ceramic item          20 min/firing
+
+  The wok does not accept Dancong. The charcoal stove only accepts
+  last-stage tea. Wrong inputs are rejected with a specific message.
+
+
+================================================================================
+Appendix C  Troubleshooting
+================================================================================
+
+Q: My tea bush will not grow.
+A: Check the biome. Boreal (tier 4) and Polar (tier 5) need a campfire
+   within 2 blocks. Elsewhere it grows normally, just at different
+   speeds (3 to 8 in-game days).
+
+Q: Bonemeal does not produce harvestable leaves.
+A: By design. Bonemeal caps at "grown" (age 2). Harvesting requires
+   waiting for age 3. Tender green leaves appearing at the top means ready.
+
+Q: All my tea is tier 3 — how do I get tier 5?
+A: Grow it in a colder biome. Tier 5 needs a biome temperature below
+   0.15 (Polar) — typically snowy mountains or ice plains.
+   Bring a campfire.
+
+Q: I cannot pick up the tea tray.
+A: You must SNEAK + right-click. Plain right-click on empty space does
+   nothing (anti-misclick). To take a single piece of teaware, just
+   right-click that piece normally.
+
+Q: I cannot get tea out of the tea box.
+A: Open the GUI. Left-click takes 3, right-click takes 64,
+   shift-click takes the whole slot.
+   Sneak + right-click picks up the whole box — it does not pour tea out.
+
+Q: The kettle does not boil on a tea table.
+A: A normal tea table is not a heat source. Use a HOT TEA TABLE
+   (tea table + magma block), or place the kettle directly on a magma
+   block / lit campfire / lit furnace.
+
+Q: Right-clicking finished tea does nothing.
+A: Finished tea cannot be eaten directly. Go through the full brewing
+   flow: tray -> gaiwan -> cups -> dry tea -> boiling water -> pour -> drink.
+
+Q: Will I lose the tea inside if I break the tea box?
+A: No. The box drops with all its tea inside.
+
+Q: Can I mix different teas in one processing block?
+A: No. A single block holds one origin and one stage at a time.
+   Mixing gives "There is already tea of another stage on the tray".
+
+Q: Does rain affect drying?
+A: Yes. Open sky + rain pauses drying (it does not reset).
+   A block above the tray blocks rain.
+
+Q: How do I tell the decorative teapot from the kettle?
+A: Read the tooltip. Right-clicking the decorative teapot says
+   "This is a decorative teapot — use the 'Kettle' to boil water".
+   The kettle holds water, boils and emits steam.
+
+
+================================================================================
+Author: bilibili 黑山大叔 (Heishandashu)
+https://space.bilibili.com/19428259
+================================================================================

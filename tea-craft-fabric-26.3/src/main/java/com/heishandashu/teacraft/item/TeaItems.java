@@ -398,7 +398,6 @@ public final class TeaItems {
                                     net.minecraft.world.entity.MobCategory.MISC)
                             .sized(0.0F, 0.0F)
                             .noSummon()
-                            .noSave()
                             .build(net.minecraft.resources.ResourceKey.create(
                                     net.minecraft.core.registries.Registries.ENTITY_TYPE,
                                     TeaCraft.id("tea_seat"))));

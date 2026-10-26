@@ -4465,6 +4465,60 @@ public final class TeaSelfCheck {
                 TeaItems.SEAT_TYPE != null && TeaItems.SEAT_TYPE.getDimensions().width() == 0.0F,
                 "座位实体不该有体积（否则会挡住玩家）");
 
+        // ---------- 真正坐下（此前的自检只验形状，没验「坐得下」）----------
+        //
+        // 【为什么补这条】用户实测「无法坐到椅子上」。
+        // 而原有断言全都 PASS —— 因为只查了注册、形状、朝向，
+        // 从来没有真的走一遍「生成座位 → startRiding → tick 一次」。
+        // 这条断言把整条链路跑一遍，任何一环断掉都会红。
+        {
+            BlockPos seatBase = pos.offset(6, 0, 0);
+            level.setBlock(seatBase, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(seatBase.below(), Blocks.STONE.defaultBlockState(), 3);
+            BlockState chairState = TeaItems.TEA_CHAIR
+                    .defaultBlockState()
+                    .setValue(com.heishandashu.teacraft.block.TeaChairBlock.FACING,
+                            net.minecraft.core.Direction.NORTH);
+            level.setBlock(seatBase, chairState, 3);
+
+            double testSeatY = seatBase.getY()
+                    + com.heishandashu.teacraft.block.TeaChairBlock.SEAT_HEIGHT / 16.0;
+            var testSeat = com.heishandashu.teacraft.block.TeaSeatEntity.create(
+                    level, seatBase, testSeatY);
+            check("tea_seat_entity_creatable", testSeat != null,
+                    "TeaSeatEntity.create 必须返回实体（返回 null 说明 TYPE 未绑定）");
+
+            var rider = new net.minecraft.world.entity.player.Player(level,
+                    new com.mojang.authlib.GameProfile(
+                            java.util.UUID.nameUUIDFromBytes("teacraft_seat_test".getBytes()),
+                            "teacraft_seat_test")) {
+                @Override
+                public net.minecraft.world.level.GameType gameMode() {
+                    return net.minecraft.world.level.GameType.SURVIVAL;
+                }
+            };
+            rider.setPos(seatBase.getX() + 0.5, seatBase.getY(), seatBase.getZ() + 0.5);
+
+            if (testSeat != null) {
+                level.addFreshEntity(testSeat);
+                boolean riding = rider.startRiding(testSeat, true, true);
+                check("tea_chair_player_can_sit", riding,
+                        "玩家应能坐上茶椅（startRiding 返回 false 说明座位无效）");
+
+                if (riding) {
+                    // 跑一次 tick：座位实体的 tick 里有「没乘客就自毁」的逻辑，
+                    // 如果乘客没挂上，这里会把玩家踢下来
+                    testSeat.tick();
+                    check("tea_chair_seat_survives_tick",
+                            !testSeat.isRemoved() && rider.isPassenger(),
+                            "座位实体的 tick 不该把刚坐下的玩家踢掉");
+                    rider.stopRiding();
+                }
+                if (!testSeat.isRemoved()) testSeat.discard();
+            }
+            level.setBlock(seatBase, Blocks.AIR.defaultBlockState(), 3);
+        }
+
         // ---------- 座位实体必须有渲染器 ----------
         //
         // 【这条防的是「右键椅子崩溃」】实体「不可见」不等于「不用注册渲染器」：
