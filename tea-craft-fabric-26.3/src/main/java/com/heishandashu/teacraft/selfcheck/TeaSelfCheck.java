@@ -4465,6 +4465,25 @@ public final class TeaSelfCheck {
                 TeaItems.SEAT_TYPE != null && TeaItems.SEAT_TYPE.getDimensions().width() == 0.0F,
                 "座位实体不该有体积（否则会挡住玩家）");
 
+        // ---------- EntityType 工厂必须能造出实体 ----------
+        //
+        // 【这条防的是「坐上去立刻被甩下来」】
+        //
+        // 客户端收到实体生成包后，是用 EntityType 的工厂重建实体的：
+        //     EntityType.create(Level, EntitySpawnRequest)
+        //       -> this.factory.create(this, level)
+        //
+        // 之前座位类型是用 createNothing(...) 建的，它的工厂 lambda 直接返回
+        // null。服务端因为绕过工厂直接 new，所以一切正常；但客户端拿到的是
+        // null，等于根本没有载具 —— 玩家一坐上去就被甩下来。
+        //
+        // 自检跑在服务端，永远走不到那条路，所以必须在这里显式验证工厂。
+        check("tea_seat_type_has_factory",
+                TeaItems.SEAT_TYPE.create(level,
+                        net.minecraft.world.entity.EntitySpawnReason.COMMAND) != null,
+                "EntityType 的工厂必须能造出座位实体（返回 null 说明用了 createNothing，"
+                        + "客户端会重建失败 → 坐上去立刻被甩下来）");
+
         // ---------- 真正坐下（此前的自检只验形状，没验「坐得下」）----------
         //
         // 【为什么补这条】用户实测「无法坐到椅子上」。

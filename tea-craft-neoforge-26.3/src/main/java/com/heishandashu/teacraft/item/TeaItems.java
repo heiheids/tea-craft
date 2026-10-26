@@ -396,25 +396,29 @@ public final class TeaItems {
                     java.util.Set.of(POTTER_WHEEL.get())));
 
     /**
-     * 妞呭瓙搴т綅瀹炰綋銆?
-     *
-     * <p>鍧愪笅蹇呴』闈犮€岄獞涔樹竴涓疄浣撱€嶅疄鐜帮紝鏂瑰潡鏈韩褰撲笉浜嗚浇鍏枫€傛墍浠ユ瀛愭湁绌烘墜
-     * 鍙抽敭鏃剁敓鎴愯繖涓笉鍙瀹炰綋锛岀帺瀹堕獞涓婂幓灏辫鍥哄畾鍦ㄥ骇闈㈤珮搴︺€?/p>
-     *
-     * <p>{@code createNothing} + {@code sized} + {@code noSummon}锛?
-     * 涓嶈兘鐢?/summon 鍒峰嚭鏉ワ紝涔熶笉鍙備笌鑷劧鐢熸垚銆?/p>
-     */
-    /**
      * 茶椅的隐形座位实体。
      *
-     * <p>方块本身不能当载具，所以右键茶椅时生成一个零尺寸、不存档的实体，
+     * <p>方块本身不能当载具，所以右键茶椅时生成一个零尺寸的不可见实体，
      * 把玩家挂上去。它完全不可见，但<b>仍然必须注册渲染器</b>
      * （见 EmptyEntityRenderer 的注释：缺渲染器会在渲染线程 NPE 崩溃）。</p>
+     *
+     * <h2>必须用 of(TeaSeatEntity::new, ...)，不能用 createNothing</h2>
+     * <p>{@code createNothing} 的工厂 lambda 返回 null。服务端因为绕过工厂
+     * 直接 new，看不出问题；但客户端收到生成包后是用工厂重建实体的：</p>
+     * <pre>
+     *   EntityType.create(Level, EntitySpawnRequest)
+     *     -&gt; this.factory.create(this, level)   // createNothing 这里给 null
+     * </pre>
+     * <p>结果：客户端没有载具，玩家一坐上去立刻被甩下来。</p>
+     *
+     * <p>另外 {@code noSave()} 会把 serialize 置 false，
+     * startRiding 直接返回 false（连坐都坐不上）。</p>
      */
     public static final DeferredHolder<EntityType<?>, EntityType<com.heishandashu.teacraft.block.TeaSeatEntity>>
             SEAT_TYPE = ENTITY_TYPES.register("tea_seat", id ->
                     net.minecraft.world.entity.EntityType.Builder
-                            .<com.heishandashu.teacraft.block.TeaSeatEntity>createNothing(
+                            .<com.heishandashu.teacraft.block.TeaSeatEntity>of(
+                                    com.heishandashu.teacraft.block.TeaSeatEntity::new,
                                     net.minecraft.world.entity.MobCategory.MISC)
                             .sized(0.0F, 0.0F)
                             .noSummon()
