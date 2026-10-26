@@ -3,7 +3,7 @@
 Minecraft 模组：按群系温度种茶，经三条真实工艺链（绿茶 / 红茶 / 凤凰单丛）加工，
 再配一整套茶具与家具泡制、品饮。
 
-作者：[bilibili 黑山大叔](https://space.bilibili.com/)
+作者：[bilibili 黑山大叔](https://space.bilibili.com/19428259)
 
 ---
 
