@@ -2,7 +2,7 @@
 茶工艺 / Tea Craft —— 技术说明
 ================================================================
 
-作者：bilibili 黑山大叔
+作者：bilibili 黑山大叔  https://space.bilibili.com/19428259
 
 双版本实现：
   Minecraft 26.3   Fabric       tea-craft-fabric-26.3-1.4.12

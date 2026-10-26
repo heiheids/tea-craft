@@ -1,4 +1,6 @@
 # 茶工艺 / Tea Craft
+<img width="1920" height="960" alt="2026-10-26_15 11 32" src="https://github.com/user-attachments/assets/03ab68e5-05f3-4397-bbcd-39566ce8040e" />
+<img width="1920" height="960" alt="2026-10-26_15 12 33" src="https://github.com/user-attachments/assets/094fb7d3-b9ee-439d-a415-ca110fcdaa29" />
 
 Minecraft 模组：按群系温度种茶，经三条真实工艺链（绿茶 / 红茶 / 凤凰单丛）加工，
 再配一整套茶具与家具泡制、品饮。

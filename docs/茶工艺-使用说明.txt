@@ -2,7 +2,7 @@
 茶工艺 / Tea Craft —— 使用说明
 ================================================================
 
-作者：bilibili 黑山大叔
+作者：bilibili 黑山大叔  https://space.bilibili.com/19428259
 支持版本：Minecraft 26.3 (Fabric) / Minecraft 26.3 (NeoForge) /
           Minecraft 1.21.1 (NeoForge)
 
