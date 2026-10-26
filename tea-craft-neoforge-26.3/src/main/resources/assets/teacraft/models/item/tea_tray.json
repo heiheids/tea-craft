@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "teacraft:block/tea_tray_top_empty"
+  }
+}

@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = '1.1.6'
+group = 'com.heishandashu.teacraft'
+
+base {
+    archivesName = 'tea-craft-neoforge-1.21.1'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+neoForge {
+    version = '21.1.256'
+}
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    // javac 默认只打印 100 条错误，会掩盖真实问题
+    options.compilerArgs << '-Xmaxerrs' << '5000'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand version: project.version
+    }
+}
+
+// 开发期运行配置（自检需要服务端）
+neoForge {
+    runs {
+        server {
+            server()
+        }
+        client {
+            client()
+        }
+    }
+}

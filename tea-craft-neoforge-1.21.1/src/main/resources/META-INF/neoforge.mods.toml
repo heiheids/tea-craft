@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+
+[[mods]]
+modId="teacraft"
+version="${version}"
+displayName="茶工艺"
+description="制茶与泡茶"
+
+# Mixin 配置必须在 mods.toml 里声明，NeoForge 才会去加载它。
+# （Fabric 是写在 fabric.mod.json 的 "mixins" 数组里，NeoForge 写法不同。）
+[[mixins]]
+config="teacraft.mixins.json"
+
+[[dependencies.teacraft]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.256,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.teacraft]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"

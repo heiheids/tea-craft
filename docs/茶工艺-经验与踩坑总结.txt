@@ -1,0 +1,767 @@
+================================================================
+茶工艺项目 —— 踩坑与经验总结
+================================================================
+
+这份文档记录实际踩到的坑。每一条都是「编译能过、进游戏才出问题」
+或者「看起来修好了、其实没修」的情况。
+
+按主题分类，不按时间顺序。
+
+
+================================================================
+第一部分：Minecraft 版本迁移的坑
+================================================================
+
+
+【1】「不可见」的实体也必须注册渲染器
+----------------------------------------------------------------
+
+现象：
+  右键茶椅 → 游戏立即崩溃。
+
+日志：
+  java.lang.NullPointerException: Cannot invoke
+  "EntityRenderer.shouldRender(Entity, Frustum, double, double, double)"
+  because "entityrenderer" is null
+    at EntityRenderDispatcher.shouldRender
+
+原因：
+  座位实体（TeaSeatEntity）做成完全不可见，我以为不用注册渲染器。
+  但原版渲染循环对每个实体都会查渲染器：
+    entityrenderer = this.renderers.get(entity.getType());  // → null
+    entityrenderer.shouldRender(...)                        // → NPE
+  这是渲染线程的致命异常，所以立刻崩。
+
+修法：
+  写一个 EmptyEntityRenderer，shouldRender() 返回 false，注册上去。
+
+教训：
+  「视觉上不可见」不等于「不需要渲染器」。
+  这是编译期查不出来的（缺的是运行时注册），必须用源码守卫断言。
+
+
+【2】openMenu 必须传数据写入器，否则客户端 buf 为 null
+----------------------------------------------------------------
+
+现象（1.21.1 茶盒）：
+  右键茶盒，客户端崩溃。
+
+日志：
+  java.lang.NullPointerException: Cannot invoke
+  "net.minecraft.network.RegistryFriendlyByteBuf.readBlockPos()"
+  because "buf" is null
+
+原因：
+  菜单注册用的是 IMenuTypeExtension.create，它的工厂签名一定会执行：
+    (id, inv, buf) -> { BlockPos pos = buf.readBlockPos(); ... }
+  但打开时我写的是：
+    sp.openMenu(new SimpleMenuProvider(...));   // 没传写入器
+  于是客户端拿到的 buf 是 null。
+
+修法：
+  sp.openMenu(new SimpleMenuProvider(...),
+          buf -> buf.writeBlockPos(pos));       // ← 补上
+
+教训：
+  窑炉（TeaCharcoalStoveBlock:116）早就写着正确写法，
+  而且注释明确说了这件事。我照抄 26.3 的思路翻译，却没看
+  同版本内现成的范例。
+
+  ★ 移植代码时，先找同版本、同项目里的成功范例，不要凭记忆翻译。
+
+
+【3】26.3 与 1.21.1 的 API 差异清单
+----------------------------------------------------------------
+
+以下都是实际撞到并修正的：
+
+  项目                  1.21.1                     26.3
+  --------------------  -------------------------  ----------------------------
+  设置界面              mc.setScreen(s)            mc.setScreenAndShow(s)
+  方块需要 codec        必须（simpleCodec）        不需要（没有 simpleCodec）
+  onRemove              onRemove                   affectNeighborsAfterRemoval
+  startRiding           2 参数                     3 参数
+  实体存档              CompoundTag                ValueInput / ValueOutput
+  菜单点击类型          ClickType                  ContainerInput
+  菜单坐标数据          buf 写入器                 ExtendedMenuProvider
+  物品定义              models/item/               items/ + models/item/
+  配方 key/ingredients  {"item":..} / {"tag":..}  "teacraft:x" / "#tag"
+  ResourceLocation      存在                       Identifier（已改名）
+  注册表取值            get()                      getOptional()
+  Screen 绘制           render / renderBg          extractBackground / extractRenderState
+  Screen 抽象方法       renderBg 必须实现          -
+  物品装饰              renderItemDecorations      itemDecorations
+  维度属性类型          DirectionProperty          EnumProperty<Direction>
+
+  TeaStages 的 Stage 记录类在两版相同，可以共用思路。
+
+
+================================================================
+第二部分：GUI 与渲染的坑
+================================================================
+
+
+【4】items/<name>.json 指向错了，display 就完全不生效
+----------------------------------------------------------------
+
+现象：
+  改了 models/item/tea_box.json 的 display.gui.rotation，
+  进游戏图标一点没变。
+
+原因（26.3）：
+  物品图标的链路是：
+    assets/teacraft/items/tea_box.json  →  models/block/tea_box.json
+  我改的 models/item/tea_box.json 根本不在链路上，是死文件。
+
+  更严重的是：茶桌、茶椅、烧水茶桌全都犯了这个错 ——
+  它们的 display 从来没生效过，图标一直显示的是未变换的侧面图。
+
+修法：
+  items/tea_box.json 里改成指向 item/tea_box：
+    { "model": { "type": "minecraft:model",
+                 "model": "teacraft:item/tea_box" } }
+  由 models/item/tea_box.json 带 display，再 parent 到 block。
+
+教训：
+  改完资源后必须验证「这条链路真的被引用」，
+  而不是看到文件里写了 display 就以为生效了。
+
+  自检里加了断言：items/<name> 必须等于 teacraft:item/<name>。
+
+
+【5】GUI 里数字被物品图标遮住 —— 是 z 轴层级，不是绘制顺序
+----------------------------------------------------------------
+
+现象：
+  茶盒界面里，自定义画的数量数字看不到，像被茶叶图标盖住。
+
+我试错的四轮（全部错误或部分错误）：
+  第 1 轮：以为 super.render() 之后再画就行       → 坐标错位
+  第 2 轮：改覆盖 renderSlotContents              → 坐标被加了两次
+  第 3 轮：修坐标系                               → 位置对了但仍被遮
+  第 4 轮：反编译 renderItemDecorations 看字节码   → 找到真正原因
+
+真正原因：
+  原版画物品装饰时做了 z 抬升：
+    pose.translate(0, 0, 200.0f);
+  而我的 drawString 在 z=0，天然在物品下面。
+
+修法：
+  不要自己画数字，改用原版装饰接口并传显示文本：
+    g.renderItemDecorations(font, stack, x, y, String.valueOf(count));
+  原版会在 z=200 上画，位置、右对齐、阴影全包。
+  它还有个判断：count == 1 && text == null 才跳过 ——
+  传了 text 就一定画。
+
+教训：
+  ★ 渲染问题先反编译看 z 值和调用链，不要靠试。
+  我花在反复猜测上的时间，比一次认真读字节码多得多。
+
+
+【6】renderSlotContents 里的坐标系与 renderBg 不同
+----------------------------------------------------------------
+
+现象：
+  茶盒界面物品画到了格子右下角，严重错位。
+
+原因：
+  父类 render() 的流程是：
+    pose.pushPose();
+    pose.translate(leftPos, topPos, 0);       // ← 坐标系已经偏移
+    for (slot : slots) renderSlot(g, slot);   // → renderSlotContents
+    pose.popPose();
+
+  而 renderBg 是在 translate 之前调用的。
+
+  所以：
+    renderBg 里要写  leftPos + slot.x     （全局坐标）
+    renderSlotContents 里要写  slot.x     （已经是局部坐标）
+
+  我两处都写成 leftPos + slot.x，于是槽位内的坐标加了两遍。
+
+教训：
+  同一个类里，不同回调的坐标系基准可能不同。
+  判断方法：看父类在调用前后有没有 push/popPose 和 translate。
+
+
+【7】自己实现 tooltip 的补丁是绕过，不是根治
+----------------------------------------------------------------
+
+现象（1.21.1 茶盒）：
+  打开茶盒状态下，鼠标悬停物品不出 tooltip（连背包物品也没有）。
+
+我的调查：
+  反编译 AbstractContainerScreen.render 后，发现它内部完全没有
+  renderTooltip 调用，只有 renderBackground / renderSlot /
+  renderSlotHighlight / renderLabels。
+  那原版容器界面的 tooltip 到底由谁画？我没找到确切答案。
+
+最终处理：
+  在 render() 里显式补一次调用：
+    super.render(g, mouseX, mouseY, partialTick);
+    renderTooltip(g, mouseX, mouseY);
+  renderTooltip 自己会检查 carried 是否为空、hoveredSlot 是否有物品，
+  所以重复调用是安全的（没东西时不做事）。
+
+状态：
+  ★ 这是绕过，不是根治。我没有真正定位到根因。
+  如果后续出现 tooltip 重影/位置偏移，说明重复渲染了，
+  需要换成精确方案。
+
+
+================================================================
+第三部分：数据与逻辑的坑
+================================================================
+
+
+【8】物品「产地」丢失 —— 组件写了但没读，或者压根没写
+----------------------------------------------------------------
+
+现象 A：
+  所有茶都是温带、3 级、60 分钟。
+
+原因 A：
+  TeaBushBlock 采摘时直接 new ItemStack(leaf)，
+  忘了 setOrigin(stack, origin)。
+  下游全部走 originOf(stack, TEMPERATE) 的默认值。
+
+修法 A：
+  采摘后立刻 TeaComponents.setOrigin(stack, origin)。
+
+现象 B：
+  寒带的茶经过摇青之后变成温带。
+
+原因 B：
+  TRAY_ORIGIN 组件有 2 处写入、0 处读取。
+  TeaTrayItem.useOn 恢复了 COUNT / STAGE 但没恢复产地，
+  方块实体重建时用了默认的 TEMPERATE。
+
+修法 B：
+  在 useOn 里先读出 originId，super.useOn 之后再
+  tray.setOrigin(TeaOrigin.byId(originId)) + sendBlockUpdated。
+  另外 TeaTrayBlock.setPlacedBy 也补了一次（双保险）。
+
+教训：
+  ★ 「组件写了」和「组件被读了」是两件事。
+  必须逐条追踪：写在哪、读在哪、中间有没有重建对象。
+
+
+【9】朝向被物品锁死 —— 拿起一次就再也转不动
+----------------------------------------------------------------
+
+现象：
+  烧水壶 / 茶盘 被拿起过一次后，之后不管站在哪边放下，
+  朝向都是同一个方向。
+
+原因：
+  放置时优先读物品上记的朝向：
+    String saved = stack.get(TeaComponents.KETTLE_FACING);
+    if (saved != null) want = 解析(saved);      // ← 优先用旧朝向
+    if (want == null)  want = 玩家朝向;         // ← 只有没记录时才看玩家
+  而拿起时会把这个朝向烘焙进物品。于是永久锁死。
+
+修法：
+  两处（getStateForPlacement / setPlacedBy）都改成
+  一律按放置者转向，不再读物品上的朝向。
+
+教训：
+  「朝向」是摆放时决定的事，不该被物品记住。
+  这类「看起来贴心的记忆功能」往往是 bug 来源。
+
+  自检里加了反向断言：源码里不能再出现 KETTLE_FACING 的读取。
+
+
+【10】自检本身会骗人 —— 假绿
+----------------------------------------------------------------
+
+现象：
+  单丛茶永远卡在发酵阶段，完成不了。
+
+原因（是我自己引入的回归）：
+  之前修「绿茶不该自动发酵」时，把判定改成只看
+  ROLLED_BY_INPUT → FERMENTED_BY_INPUT 这一条链。
+  但单丛走的是 DIRECT_FERMENT，不在 ROLLED_BY_INPUT 里，
+  于是 ferments() 返回 false，永远不发酵。
+
+  更糟的是：测试没发现，因为 fermentNow() 帮手
+  无条件把状态设成 STAGE_FERMENTED，绕过了所有判定。
+
+修法：
+  1. 统一成 ferments(String kind)，同时接受两条路径
+  2. 把 fermentNow() 改成真的调 tick()，走真实逻辑
+
+  改完后立刻暴露：旧的 rolled_ferments 断言是假绿（从没设 kind）。
+  重写成三个「真实 tick」测试：
+    dancong_ferments_in_real_tick
+    black_ferments_in_real_tick
+    green_stays_rolled_in_real_tick
+
+教训：
+  ★ 测试帮手如果绕过了真实路径，测试就是假的。
+  ★ 发现假绿是好事，不要因为「原来一直是绿的」就不敢改。
+
+
+【11】断言写太松，改坏了也不报警
+----------------------------------------------------------------
+
+两个实例：
+
+  (a) 座位渲染器
+      我加了断言 seat_renderer_registered，
+      破坏性测试时「删掉注册」，结果断言还是 PASS。
+      原因是我的替换字符串写错了，实际没删掉，
+      而我没去深究「为什么断言没红」，差点以为测试有效。
+      改用逐行删除后才确认断言有效。
+
+  (b) 名字完整性
+      早期只查 block.teacraft.xxx 存在就认为名字没问题，
+      而 26.3 的 descriptionId 用 item. 前缀，
+      BlockItem 不会回退到 block.*。
+      导致四个新物品名字一直显示成 item.teacraft.tea_box。
+
+教训：
+  ★ 每写一条断言，都要做一次破坏性验证：
+    故意改坏代码，确认断言真的会变红。
+  ★ 断言没红的时候，先怀疑断言，不要先怀疑代码。
+
+
+================================================================
+第四部分：模型与资源的坑
+================================================================
+
+
+【12】共面导致贴图闪烁（z-fighting）
+----------------------------------------------------------------
+
+现象：
+  茶椅靠背贴图闪烁。
+
+原因：
+  三处共面：
+    - 靠背顶梁 x 1~15 覆盖了后腿的 x 1~3.5 / 12.5~15，且 z 全同
+    - 背板 y 到 14.5，顶梁从 14.5 起，正好贴合
+
+修法：
+  顶梁缩到 x 3.5~12.5、z 1.5~3.5（只跨两腿之间）
+  背板缩到 y 9.5~14.4、z 1.5~2.9（留 0.1 缝）
+
+  同样的坑在茶桌腿上也出现过：
+  腿的 up 面与围板下表面共面于 y=9 → 画出凸出的条纹。
+  去掉那 4 个 up 面解决（21 面 → 17 面）。
+
+教训：
+  任何两个元素的面贴在一起，都可能 z-fighting。
+  要么完全不接触，要么错开 0.01~0.1。
+
+
+【13】26.3 multipart 的 y 旋转不生效
+----------------------------------------------------------------
+
+现象：
+  茶盘的 multipart 模型，apply.y 怎么改都不转。
+
+原因：
+  26.3 的 multipart 里 apply.y 不生效，必须预先做好旋转模型。
+  而 variants + y 是有效的。
+
+修法：
+  需要四向旋转的方块，用 variants 而不是 multipart。
+
+
+【14】VoxelShape.max(Axis) 返回 0~1，不是 0~16
+----------------------------------------------------------------
+
+现象：
+  断言 check("tea_table_shape_full", max == 16.0) 永远失败。
+
+原因：
+  max() 返回的是格（0~1），不是像素（0~16）。
+
+修法：
+  满格写 1.0，椅面高度写 SEAT_HEIGHT / 16.0 = 0.59375。
+
+教训：
+  这个 API 的单位与 Block.box() 的参数单位不同，容易搞混。
+
+
+================================================================
+第五部分：工具与流程
+================================================================
+
+
+【15】PowerShell 改源文件反复搞坏文件
+----------------------------------------------------------------
+
+实际发生过：
+  - 多行字符串在 PowerShell 里解析失败（含 * < { } 的代码）
+  - 数组赋值只写进去第一行，后续行丢失
+  - 行号偏移导致删错行 / 插入位置切断原有语句
+  - 正则替换吞掉行首缩进和结尾逗号，产生非法 JSON
+  - 中文乱码导致 old_string 匹配失败
+
+最严重的一次：
+  在 TeaMenus 里插入新菜单，插到了 ClayPotterWheelMenu 注册的中间，
+  编译报 22 个错误。
+
+有效做法：
+  ★ 用 edit / write 工具做精确替换，不要用 shell 拼字符串
+  ★ 必须按行号操作时，先 grep 确认行号，操作后立刻验证结构
+  ★ 中文注释的行不要作为匹配锚点（编码会变）
+  ★ 每次脚本化修改后，检查：文件头、package 数量、括号平衡、JSON 合法性
+
+
+【16】用 Get-Content 读到越界索引会回绕到文件头
+----------------------------------------------------------------
+
+现象：
+  误判「文件被截断了」「package 重复了」。
+
+原因：
+  PowerShell 数组越界索引会绕回开头，不报错。
+
+教训：
+  怀疑文件损坏时，用 grep / read 工具核实，不要只看 Get-Content 的结果。
+
+
+【17】一次认真读字节码，胜过十次猜测
+----------------------------------------------------------------
+
+这是本项目最反复出现的教训。
+
+典型案例：
+  - 数字被遮住：猜了 3 轮都错，反编译看 z=200 一次定位
+  - 物品错位：猜了 1 轮，反编译看 translate 一次定位
+  - tooltip 不显示：反编译后仍是部分猜测（未根治）
+
+方法：
+  javap -c -classpath <jar> <类名>
+  然后找目标方法，看它调了什么、z 值是多少、坐标系怎么变。
+
+  javap -classpath <jar> <类名>               看方法签名
+  javap -c ...                                看字节码（含调用的方法与常量）
+
+对 Minecraft 这种重混淆/重实现的代码，这是最可靠的调查手段。
+
+
+================================================================
+第六部分：给未来自己的清单
+================================================================
+
+
+改代码前：
+  [ ] 这次改动涉及 26.3 还是 1.21.1？两边都要吗？
+  [ ] 先在本版本项目里找有没有现成的同类实现（别凭记忆翻译）
+  [ ] 备份源码（tools\backup_source.ps1 -Tag 说明）
+
+改代码时：
+  [ ] 用 edit / write，不用 shell 拼字符串
+  [ ] 中文注释不作匹配锚点
+
+改代码后：
+  [ ] 编译
+  [ ] 26.3 跑自检（TEACRAFT_SELFCHECK=1 + runServer）
+  [ ] 新断言做一次破坏性验证（确认真的会红）
+  [ ] 检查文件结构没被破坏（package / 括号 / JSON）
+
+打包前：
+  [ ] 两版都重新 build
+  [ ] 验证 jar 里确实包含新文件（用 System.IO.Compression 列目录）
+  [ ] 验证语言键在 jar 里存在
+  [ ] 更新版本号
+
+遇到「改了没效果」时：
+  [ ] 先确认改的文件真的被引用（不是死文件）
+  [ ] 再反编译看实际行为
+  [ ] 最后才怀疑自己的逻辑
+
+
+================================================================
+
+================================================================
+第七部分：补记 —— 断言写太松的第三次实例
+================================================================
+
+
+【18】断言被"同名的另一处调用"满足
+----------------------------------------------------------------
+
+背景：
+  给茶盒加「挖掉不丢茶叶」的功能，覆写 playerDestroy，
+  里面先 box.saveWithId(out)，再 BlockItem.setBlockEntityData(drop, ...)。
+
+  写了断言：
+    boxSrc.contains("playerDestroy")
+    && boxSrc.contains("saveWithId")
+    && boxSrc.contains("setBlockEntityData")
+
+破坏性验证（删掉 setBlockEntityData 那行）：
+  ★ 断言仍然 PASS
+
+原因：
+  1. BlockItem.setBlockEntityData 在 setPlacedBy 里<b>还有一处</b>调用
+     （恢复数据用的），contains 命中的是那一处，不是 playerDestroy 里的。
+  2. 注释里也写着 saveWithId / setBlockEntityData 这些词，
+     contains 同样会命中注释。
+
+修法：
+  不用 contains 查关键字，改为查<b>完整语句</b>并<b>校验相对位置</b>：
+
+    int destroyAt = boxSrc.indexOf("public void playerDestroy");
+    int saveAt    = boxSrc.indexOf("box.saveWithId(out)", destroyAt);
+    int writeAt   = boxSrc.indexOf(
+            "BlockItem.setBlockEntityData(drop, box.getType(), out)", destroyAt);
+    // 三者都必须存在，且顺序正确
+    destroyAt >= 0 && saveAt > destroyAt && writeAt > saveAt
+
+  再跑破坏性验证：FAIL ✅
+
+教训：
+  ★ 同一个方法名/类名在项目里出现多次是常态，
+    contains 会命中任何一处（包括注释）。
+  ★ 源码守卫必须满足两点：
+      1. 匹配完整的调用语句（带参数），不要只匹配方法名
+      2. 用 indexOf(needle, fromIndex) 限定查找起点，
+         确保命中的是目标方法体内的那一处
+  ★ 这是本项目第三次遇到「断言写太松」。
+    前两次见第 11 条。每次都是靠破坏性验证才发现的。
+
+
+================================================================
+
+================================================================
+第八部分：补记 —— 又一次「断言太松」
+================================================================
+
+
+【19】死键 + 模糊匹配 = 断言骗人
+----------------------------------------------------------------
+
+背景：
+  用户报「产地信息也没了」。
+  查下来：语言文件里 teacraft.tooltip.origin 这个键<b>早就存在</b>
+  （"§8产地 §7%1$s"），但 TeaDrinkItem 的 tooltip 里从没调用过它 ——
+  是个死键。同时「右键饮用」那行还在。
+
+修法：
+  TeaDrinkItem.appendHoverText 里加产地、去掉 drink_hint。
+
+第一次写的断言：
+  drinkSrc.contains("teacraft.tooltip.origin")
+  && drinkSrc.contains("origin.translationKey()")
+
+破坏性验证（删掉整个产地显示块）：
+  ★ 断言仍然 PASS
+
+原因：
+  我删的是
+    tooltip.accept(Component.translatable("teacraft.tooltip.origin",
+            Component.translatable(origin.translationKey())));
+  但注释里还留着这行字：
+    // 【曾经漏过】tooltip.origin 这个语言键早就存在...
+  contains 命中的是<b>注释</b>，不是代码。
+
+修法：
+  删除匹配锚点里的注释行，或者更彻底：
+  用行号精确删除整块代码来做破坏性验证。
+
+  最终断言（还是 contains，但破坏验证改成按行删）：
+    drinkSrc.contains("teacraft.tooltip.origin")
+    && drinkSrc.contains("origin.translationKey()")
+    再按行删掉 83-85 行 → FAIL ✅
+
+教训：
+  ★ 源码守卫的破坏性验证，必须真的改动<b>代码行</b>，
+    而不是用字符串替换（可能命中注释，替换不到代码）。
+  ★ 更稳的做法：先 grep 出准确行号，再按行删除。
+  ★ 这是第四次「断言太松」。反复出现说明：
+    写断言容易，<b>验证断言有效</b>才是难点。
+
+
+【20】改 1.21.1 时插入位置算错，把代码插进了 use() 里
+----------------------------------------------------------------
+
+现象：
+  compileJava 报一堆错，appendHoverText 的头部被删掉了。
+
+原因：
+  我用「行号 72 起替换到 78」的方式插入新代码，
+  但 1.21.1 那个文件里第 72 行是 use() 方法的 return 语句，
+  不是 appendHoverText 的开始。
+
+修法：
+  按行号重建整个文件：保留 1-71（use 方法完整），
+  之后手写 appendHoverText。
+
+教训：
+  ★ 在另一个版本上套用「行号」是最危险的操作 ——
+    两个文件的布局不同，行号完全不能通用。
+  ★ 跨版本改动应该：优先用 edit 工具按内容匹配，
+    或直接 write 整个文件。
+  ★ 用行号前必须先 read 确认那几行到底是什么。
+
+
+================================================================
+
+================================================================
+第九部分：26.3 NeoForge 迁移（第四支工程）
+================================================================
+
+背景：用户要求把模组也放到 `D:\26.3F\.minecraft\versions\26.3-NeoForge086`。
+另两支都不能用：26.3 Fabric 支的 jar 在 NeoForge 下不加载；
+1.21.1 NeoForge 支的 mods.toml 写死 `minecraft = "[1.21.1,1.22)"`。
+
+做法：以 26.3 Fabric 支为骨架（MC 那一层同代可直接用），
+只把加载器层换成 NeoForge 写法。新工程：`D:\工程-茶工艺-nf263`。
+
+
+【21】NeoForge 延迟注册的三个必踩之坑
+----------------------------------------------------------------
+
+这一支一共炸了三次，全部是「编译期完全看不出来、只在启动时炸」的：
+
+  (a) 静态字段初始化顺序
+      我把 DeferredRegister 声明写在类的中部，而它上面的
+      41 个字段初始化表达式会立刻调用用到它的辅助方法：
+        NullPointerException: Cannot invoke "DeferredRegister.register(...)"
+        because "TeaComponents.COMPONENTS" is null
+      → 修法：注册器必须声明在类的最前面（所有字段之前）。
+
+  (b) 静态块里调 .get()
+      我用 `static { TeaTrayBlockEntity.TYPE = TRAY_BE_TYPE.get(); }`：
+        NullPointerException: Trying to access unbound value:
+        ResourceKey[minecraft:block_entity_type / teacraft:tea_tray]
+      → 修法：移到 FMLCommonSetupEvent 里（那时 holder 才绑定）。
+
+  (c) 注册器忘了挂总线
+      TeaEffects 里定义了 EFFECTS 但 register() 没调 EFFECTS.register(modBus)，
+      Holder 永远是 unbound，第一次 .value() 时炸：
+        NullPointerException: unbound value: mob_effect / teacraft:dancong_tea
+      → 这个最隐蔽：字段能读、日志正常，只在真正取值时炸。
+
+  共同教训：
+    ★ NeoForge 的注册是「两段式」——先登记，再由 FML 在合适时机绑定。
+      任何 .get() / .value() 都必须等到 FMLCommonSetupEvent 之后。
+    ★ Fabric 支那种「我写 static 块，类加载时就注册好」的思路在本支不成立。
+
+
+【22】DeferredRegister 返回类型的连锁反应
+----------------------------------------------------------------
+
+改完注册方式后，41 个字段的类型从 `Block`/`Item` 变成
+`DeferredBlock`/`DeferredItem`，于是：
+
+  - 179 处 `TeaItems.XXX` 引用要加 `.get()`
+  - `ALL_ITEMS`（静态 List<Item>）必须改成方法 `allItems()`
+    （静态初始化时物品还不存在）
+  - Map<TeaOrigin, Item> 要改成 Map<TeaOrigin, DeferredItem<...>>
+  - BlockItem 构造参数、BlockEntityType 的 Set<Block> 都要 .get()
+
+  一个省事的发现：
+    26.3 的 `BlockBehaviour.Properties.setId(...)` 要的是
+    **ResourceKey<Block>**（不是 Identifier），
+    所以辅助方法签名可以保持 `Function<ResourceKey<Block>, Block>` 不变 ——
+    41 个字段的初始化代码一行都不用改（它们写的都是 `.setId(key)`）。
+
+
+【23】PowerShell 处理含中文的 Java 源码会破坏编码
+----------------------------------------------------------------
+
+这次真的踩到，损失了一次完整的自检文件（5100 行）：
+
+  用 `Get-Content` + `WriteAllLines` 读写含中文的 Java 文件后，
+  文件里所有中文全角引号 `"` 变成了 `?`，导致：
+    错误: 未结束的字符串文字  × 200 处
+
+  修法（有效）：
+    用 .NET 直接读写，不经 PowerShell 管线：
+      $enc = New-Object System.Text.UTF8Encoding($false)
+      $t = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+      [System.IO.File]::WriteAllText($path, $t, $enc)
+
+  更稳的做法：
+    ★ 含中文的源文件一律用 edit / write 工具改，不用 shell 脚本。
+    ★ 必须脚本化时，只做「不落盘」的分析，落盘走 .NET API。
+    ★ 改完立刻编译 —— 编码损坏会立刻表现为大量「未结束的字符串」。
+
+
+【24】跨版本「行号替换」是灾难
+----------------------------------------------------------------
+
+给 1.21.1 改 tooltip 时，我用「行 72 起替换到 78」，但那个文件的第 72 行
+是 use() 方法的 return 语句，结果把新代码插进了 use() 里，
+appendHoverText 的头部被吃掉。
+
+  教训：
+    ★ 两个不同版本/支的文件，行号绝对不能通用。
+    ★ 跨支改动只用「内容匹配」（edit 工具），或用 write 整体重写。
+    ★ 用行号前必须先 read 确认那几行到底是什么。
+
+
+【25】断言会因「换了世界」而假失败
+----------------------------------------------------------------
+
+现象：
+  同一份代码，dev 目录自检 1029 全绿；
+  用安装好的 jar 建**新世界**跑，变成 1028 pass / 1 fail：
+    tray_stops_when_raining_open_sky -> FAIL
+
+原因：
+  那条断言依赖「测试点所在生物群系会降水」。
+  canDryAt 内部用 isRainingAt(pos)，它会再查一次群系降水类型。
+  如果自检点落在沙漠/恶地这类干旱群系，即使
+  setRaining(true) + setRainLevel(1.0F)，isRainingAt 仍是 false。
+
+修法：
+  先判定 `level.isRainingAt(pos.above())`，
+  不降水就跳过这条（并在说明里写清为什么跳过），
+  而不是让它误报失败。
+
+  教训：
+    ★ 断言如果依赖世界状态（群系、天气、光照），就是脆弱的。
+      要么把世界条件也固定住，要么显式跳过并说明。
+    ★ 「dev 全绿」不等于「jar 也全绿」—— 最终验证必须用
+      安装好的 jar + 全新世界跑一遍。
+
+
+【26】26.3 NeoForge 的启动方式
+----------------------------------------------------------------
+
+`gradlew runServer` 在本支不可用：ModDevGradle 要下
+`neoforge-26.3.0.67-beta-moddev-config.json`，那个站连不上、缓存里也没有。
+
+  可用做法（本支已实现 tools/run-server.ps1）：
+    1. `gradlew printRuntimeClasspath --offline`
+       （自定义任务，把 compileClasspath 写到 build/runtime-classpath.txt）
+    2. 读 userdev jar 里的 config.json 拿 main/jvmArgs/props
+    3. 自己拼 java 命令：
+         java <jvmArgs> -cp <classpath>
+              -Dfml.modFolders=teacraft%%<classes>;teacraft%%<resources>
+              net.neoforged.fml.startup.Server --nogui
+
+  两个细节：
+    ★ classpath 文件是 UTF-8 写的，读的时候必须显式指定编码
+      （用 Get-Content -Raw 会把中文路径读成乱码，导致
+       "找不到或无法加载主类 net.neoforged.fml.startup.Server"）。
+    ★ 自检开关是环境变量 TEACRAFT_SELFCHECK=1，
+      要在启动进程前设好。
+
+  版本兼容：
+    编译用 26.3.0.67-beta（缓存里只有这个），
+    目标实例跑的是 26.3.0.86，mods.toml 里写 `[26.3.0.67-beta,)`，
+    0.86 满足这个下界。
+
+
+================================================================
+迁移结果
+================================================================
+
+  工程         D:\工程-茶工艺-nf263
+  jar          tea-craft-neoforge-26.3-1.4.12.jar（778.5 KB）
+  目标实例     D:\26.3F\.minecraft\versions\26.3-NeoForge086\mods
+  验证         服务端 Done (2.277s)
+               全新世界自检 pass=1029 fail=0 skip=0
+  资源         15 blockstates / 60 block 模型 / 54 item 模型 /
+               41 items 定义 / 108 贴图 / 10 配方 / 111 class
+
+
+================================================================

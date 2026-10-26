@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "lit=false": { "model": "teacraft:block/tea_charcoal_stove" },
+    "lit=true":  { "model": "teacraft:block/tea_charcoal_stove_lit" }
+  }
+}

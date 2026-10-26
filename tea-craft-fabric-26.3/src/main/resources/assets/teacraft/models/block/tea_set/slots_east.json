@@ -1,0 +1,76 @@
+{
+    "textures":  {
+                     "particle":  "teacraft:block/tea_set_slot",
+                     "slot":  "teacraft:block/tea_set_slot"
+                 },
+    "elements":  [
+                     {
+                         "from":  [
+                                      7.2,
+                                      1,
+                                      5.2
+                                  ],
+                         "to":  [
+                                    12.8,
+                                    1.005,
+                                    10.8
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#slot"
+                                              }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      2.9,
+                                      1,
+                                      1.2
+                                  ],
+                         "to":  [
+                                    6.1,
+                                    1.005,
+                                    4.4
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#slot"
+                                              }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      2.5,
+                                      1,
+                                      6.4
+                                  ],
+                         "to":  [
+                                    5.7,
+                                    1.005,
+                                    9.6
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#slot"
+                                              }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      2.9,
+                                      1,
+                                      11.6
+                                  ],
+                         "to":  [
+                                    6.1,
+                                    1.005,
+                                    14.8
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#slot"
+                                              }
+                                   }
+                     }
+                 ]
+}

@@ -1,0 +1,23 @@
+{
+  "variants": {
+    "boiled=false,facing=north,water=false": { "model": "teacraft:block/kettle", "y": 0 },
+    "boiled=false,facing=east,water=false":  { "model": "teacraft:block/kettle", "y": 90 },
+    "boiled=false,facing=south,water=false": { "model": "teacraft:block/kettle", "y": 180 },
+    "boiled=false,facing=west,water=false":  { "model": "teacraft:block/kettle", "y": 270 },
+
+    "boiled=false,facing=north,water=true": { "model": "teacraft:block/kettle", "y": 0 },
+    "boiled=false,facing=east,water=true":  { "model": "teacraft:block/kettle", "y": 90 },
+    "boiled=false,facing=south,water=true": { "model": "teacraft:block/kettle", "y": 180 },
+    "boiled=false,facing=west,water=true":  { "model": "teacraft:block/kettle", "y": 270 },
+
+    "boiled=true,facing=north,water=false": { "model": "teacraft:block/kettle", "y": 0 },
+    "boiled=true,facing=east,water=false":  { "model": "teacraft:block/kettle", "y": 90 },
+    "boiled=true,facing=south,water=false": { "model": "teacraft:block/kettle", "y": 180 },
+    "boiled=true,facing=west,water=false":  { "model": "teacraft:block/kettle", "y": 270 },
+
+    "boiled=true,facing=north,water=true": { "model": "teacraft:block/kettle", "y": 0 },
+    "boiled=true,facing=east,water=true":  { "model": "teacraft:block/kettle", "y": 90 },
+    "boiled=true,facing=south,water=true": { "model": "teacraft:block/kettle", "y": 180 },
+    "boiled=true,facing=west,water=true":  { "model": "teacraft:block/kettle", "y": 270 }
+  }
+}

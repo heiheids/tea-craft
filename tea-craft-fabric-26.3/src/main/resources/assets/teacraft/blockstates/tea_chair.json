@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "teacraft:block/tea_chair" },
+    "facing=east":  { "model": "teacraft:block/tea_chair", "y": 90 },
+    "facing=south": { "model": "teacraft:block/tea_chair", "y": 180 },
+    "facing=west":  { "model": "teacraft:block/tea_chair", "y": 270 }
+  }
+}

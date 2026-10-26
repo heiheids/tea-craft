@@ -1,0 +1,35 @@
+{
+  "textures": {
+    "particle": "teacraft:block/tea_box_top",
+    "top": "teacraft:block/tea_box_top",
+    "side": "teacraft:block/tea_box_side",
+    "rim": "teacraft:block/tea_box_rim",
+    "inner": "teacraft:block/tea_box_inner"
+  },
+  "elements": [
+    {
+      "from": [0, 6, 0],
+      "to": [16, 7, 16],
+      "faces": {
+        "up": { "texture": "#top" },
+        "down": { "texture": "#rim" },
+        "north": { "texture": "#rim", "uv": [0, 0, 16, 1] },
+        "south": { "texture": "#rim", "uv": [0, 0, 16, 1] },
+        "east": { "texture": "#rim", "uv": [0, 0, 16, 1] },
+        "west": { "texture": "#rim", "uv": [0, 0, 16, 1] }
+      }
+    },
+    {
+      "from": [1, 0, 1],
+      "to": [15, 6, 15],
+      "faces": {
+        "up": { "texture": "#inner" },
+        "down": { "texture": "#inner" },
+        "north": { "texture": "#side", "uv": [0, 0, 16, 7] },
+        "south": { "texture": "#side", "uv": [0, 0, 16, 7] },
+        "east": { "texture": "#side", "uv": [0, 0, 16, 7] },
+        "west": { "texture": "#side", "uv": [0, 0, 16, 7] }
+      }
+    }
+  ]
+}

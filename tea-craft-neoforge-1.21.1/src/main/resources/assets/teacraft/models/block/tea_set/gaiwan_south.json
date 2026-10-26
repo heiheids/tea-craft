@@ -1,0 +1,323 @@
+{
+    "textures":  {
+                     "particle":  "teacraft:block/tea_set_wood",
+                     "wood":  "teacraft:block/tea_set_wood",
+                     "floor":  "teacraft:block/tea_set_floor",
+                     "porc":  "teacraft:block/tea_set_porcelain_side",
+                     "band":  "teacraft:block/tea_set_porcelain_band",
+                     "porc_plain":  "teacraft:block/tea_set_porcelain_plain",
+                     "porc_inner":  "teacraft:block/tea_set_porcelain_inner",
+                     "porc_top":  "teacraft:block/tea_set_porcelain_top",
+                     "leaf":  "teacraft:block/tea_set_leaf",
+                     "tea":  "teacraft:block/tea_set_tea"
+                 },
+    "elements":  [
+                     {
+                         "from":  [
+                                      6.9,
+                                      1.02,
+                                      8.9
+                                  ],
+                         "to":  [
+                                    9.1,
+                                    1.5,
+                                    11.1
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      6.5,
+                                      1.5,
+                                      8.5
+                                  ],
+                         "to":  [
+                                    9.5,
+                                    2.3,
+                                    11.5
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      6.1,
+                                      2.3,
+                                      8.1
+                                  ],
+                         "to":  [
+                                    9.9,
+                                    3.2,
+                                    11.9
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      5.7,
+                                      3.2,
+                                      7.7
+                                  ],
+                         "to":  [
+                                    10.3,
+                                    4.2,
+                                    12.3
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      5.4,
+                                      4.2,
+                                      7.4
+                                  ],
+                         "to":  [
+                                    10.6,
+                                    4.75,
+                                    12.6
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               16,
+                                                               16
+                                                           ]
+                                                },
+                                       "north":  {
+                                                     "texture":  "#band",
+                                                     "uv":  [
+                                                                0,
+                                                                6,
+                                                                16,
+                                                                9
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#band",
+                                                     "uv":  [
+                                                                0,
+                                                                6,
+                                                                16,
+                                                                9
+                                                            ]
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               6,
+                                                               16,
+                                                               9
+                                                           ]
+                                                },
+                                       "east":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               6,
+                                                               16,
+                                                               9
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      5.2,
+                                      4.75,
+                                      7.2
+                                  ],
+                         "to":  [
+                                    10.8,
+                                    5.2,
+                                    12.8
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               16,
+                                                               16
+                                                           ]
+                                                },
+                                       "up":  {
+                                                  "texture":  "#porc_plain",
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             16,
+                                                             16
+                                                         ]
+                                              },
+                                       "north":  {
+                                                     "texture":  "#band",
+                                                     "uv":  [
+                                                                0,
+                                                                6,
+                                                                16,
+                                                                9
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#band",
+                                                     "uv":  [
+                                                                0,
+                                                                6,
+                                                                16,
+                                                                9
+                                                            ]
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               6,
+                                                               16,
+                                                               9
+                                                           ]
+                                                },
+                                       "east":  {
+                                                    "texture":  "#band",
+                                                    "uv":  [
+                                                               0,
+                                                               6,
+                                                               16,
+                                                               9
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      5.5,
+                                      5.21,
+                                      7.5
+                                  ],
+                         "to":  [
+                                    10.5,
+                                    5.7,
+                                    12.5
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      7.2,
+                                      5.71,
+                                      9.2
+                                  ],
+                         "to":  [
+                                    8.8,
+                                    6.3,
+                                    10.8
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     }
+                 ]
+}

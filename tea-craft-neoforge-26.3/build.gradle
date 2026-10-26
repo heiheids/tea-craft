@@ -1,0 +1,81 @@
+// 茶工艺 · 26.3 NeoForge 版 —— 构建脚本
+//
+// 和 1.21.1 那支的区别只有三处：JDK 25（不是 21）、MC 26.3、NeoForge 26.3.x。
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version "${moddev_version}"
+}
+
+version = "${mod_version}"
+group = "${mod_group}"
+
+java {
+    // 26.3 跑在 Java 25 上（和 Fabric 支一致）
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+}
+
+neoForge {
+    version = "${neoforge_version}"
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var expandProps = [
+            mod_id     : mod_id,
+            mod_name   : mod_name,
+            mod_version: mod_version,
+            mod_group  : mod_group,
+    ]
+    inputs.properties expandProps
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand expandProps
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Vendor'  : 'bilibili heishandashu',
+                'Specification-Version' : mod_version,
+                'Implementation-Title'  : mod_name,
+                'Implementation-Version': mod_version,
+        ])
+    }
+}
+
+// =====================================================================
+// 给自写启动器用：把编译期 classpath 打到文件里
+// ---------------------------------------------------------------------
+// 背景：ModDevGradle 的 runServer/prepareServerRun 要下
+// `neoforge-26.3.0.67-beta-moddev-config.json`，那个站连不上、缓存里也没有。
+// 所以 tools/ 里的启动器自己拼 classpath，这个任务负责把「依赖图」离线解析出来。
+// =====================================================================
+tasks.register('printRuntimeClasspath') {
+    group = 'verification'
+    description = '把 main 源码集的编译 classpath 写进 build/runtime-classpath.txt（离线可跑）'
+    doLast {
+        // ⚠ 刻意用 compileClasspath 而不是 runtimeClasspath：后者含
+        //   `net.neoforged:DevLaunch:1.0.2`（ModDevGradle 只为 runClient/runServer 加的），
+        //   那个构件不在离线缓存里、一解析就失败。dev 服务端要的东西都在编译 classpath 上。
+        def cp = sourceSets.main.compileClasspath
+        def out = layout.buildDirectory.file('runtime-classpath.txt').get().asFile
+        out.parentFile.mkdirs()
+        out.text = cp.asPath
+        println "写出 " + out + "（" + cp.files.size() + " 个条目）"
+    }
+}

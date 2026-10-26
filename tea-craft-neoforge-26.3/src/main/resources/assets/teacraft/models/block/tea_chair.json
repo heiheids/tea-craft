@@ -1,0 +1,402 @@
+{
+    "textures":  {
+                     "particle":  "teacraft:block/tea_chair_wood",
+                     "seat":  "teacraft:block/tea_chair_seat",
+                     "wood":  "teacraft:block/tea_chair_wood",
+                     "leg":  "teacraft:block/tea_table_leg"
+                 },
+    "elements":  [
+                     {
+                         "from":  [
+                                      0.5,
+                                      8,
+                                      0.5
+                                  ],
+                         "to":  [
+                                    15.5,
+                                    9.5,
+                                    15.5
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#seat",
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             15,
+                                                             15
+                                                         ]
+                                              },
+                                       "down":  {
+                                                    "texture":  "#leg"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#wood"
+                                                },
+                                       "west":  {
+                                                    "texture":  "#wood"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1,
+                                      5.5,
+                                      1
+                                  ],
+                         "to":  [
+                                    15,
+                                    8,
+                                    15
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#wood"
+                                              },
+                                       "down":  {
+                                                    "texture":  "#wood"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#wood"
+                                                },
+                                       "west":  {
+                                                    "texture":  "#wood"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1,
+                                      0,
+                                      12.5
+                                  ],
+                         "to":  [
+                                    3.5,
+                                    5.5,
+                                    15
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#leg",
+                                                    "cullface":  "down",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               3
+                                                           ]
+                                                },
+                                       "north":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                },
+                                       "west":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      12.5,
+                                      0,
+                                      12.5
+                                  ],
+                         "to":  [
+                                    15,
+                                    5.5,
+                                    15
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#leg",
+                                                    "cullface":  "down",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               3
+                                                           ]
+                                                },
+                                       "north":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                },
+                                       "west":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1,
+                                      0,
+                                      1
+                                  ],
+                         "to":  [
+                                    3.5,
+                                    16,
+                                    3.5
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#leg",
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             3,
+                                                             3
+                                                         ]
+                                              },
+                                       "down":  {
+                                                    "texture":  "#leg",
+                                                    "cullface":  "down",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               3
+                                                           ]
+                                                },
+                                       "north":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                },
+                                       "west":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      12.5,
+                                      0,
+                                      1
+                                  ],
+                         "to":  [
+                                    15,
+                                    16,
+                                    3.5
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#leg",
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             3,
+                                                             3
+                                                         ]
+                                              },
+                                       "down":  {
+                                                    "texture":  "#leg",
+                                                    "cullface":  "down",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               3
+                                                           ]
+                                                },
+                                       "north":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#leg",
+                                                     "uv":  [
+                                                                0,
+                                                                0,
+                                                                3,
+                                                                16
+                                                            ]
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                },
+                                       "west":  {
+                                                    "texture":  "#leg",
+                                                    "uv":  [
+                                                               0,
+                                                               0,
+                                                               3,
+                                                               16
+                                                           ]
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      3.5,
+                                      14.5,
+                                      1.5
+                                  ],
+                         "to":  [
+                                    12.5,
+                                    16,
+                                    3.5
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#wood",
+                                                  "uv":  [
+                                                             0,
+                                                             0,
+                                                             16,
+                                                             3
+                                                         ]
+                                              },
+                                       "down":  {
+                                                    "texture":  "#wood"
+                                                },
+                                       "north":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "east":  {
+                                                    "texture":  "#leg"
+                                                },
+                                       "west":  {
+                                                    "texture":  "#leg"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      3.5,
+                                      9.5,
+                                      1.5
+                                  ],
+                         "to":  [
+                                    12.5,
+                                    14.4,
+                                    2.9
+                                ],
+                         "faces":  {
+                                       "north":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#wood"
+                                                 },
+                                       "up":  {
+                                                  "texture":  "#wood"
+                                              },
+                                       "down":  {
+                                                    "texture":  "#wood"
+                                                }
+                                   }
+                     }
+                 ]
+}

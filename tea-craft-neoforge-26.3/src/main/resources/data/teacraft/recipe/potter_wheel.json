@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "teacraft_potter_wheel",
+  "key": {
+    "S": "#minecraft:wooden_slabs",
+    "F": "#minecraft:wooden_fences"
+  },
+  "pattern": [
+    "SSS",
+    "F F"
+  ],
+  "result": {
+    "id": "teacraft:potter_wheel",
+    "count": 1
+  }
+}

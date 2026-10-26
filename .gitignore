@@ -1,0 +1,45 @@
+# ---- Gradle / 构建产物 ----
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- IDE ----
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.launch
+
+# ---- 运行目录（含世界存档、日志、崩溃报告）----
+run/
+run-*/
+logs/
+crash-reports/
+*.log
+
+# ---- 反编译/临时抓取的中间文件 ----
+# tools/ 下以 _ 开头的都是「反编译产物或日志抓取」，体积大且可重新生成
+tools/_*
+*_le.txt
+*_ent.txt
+*_cpl.txt
+*_mc.txt
+
+# ---- 本地缓存 / 备份 ----
+*.bak
+*.orig
+*.rej
+*.zip
+*.jar
+# 但保留 gradle wrapper 的 jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ---- 系统文件 ----
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ---- 生成的贴图中间件 ----
+tools/**/*.png.tmp

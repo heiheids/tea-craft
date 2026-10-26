@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "has_tea=false": { "model": "teacraft:block/tea_wok" },
+    "has_tea=true":  { "model": "teacraft:block/tea_wok" }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "group": "tea_craft",
+  "ingredients": [
+    "#teacraft:fresh_leaves",
+    "minecraft:dirt"
+  ],
+  "result": {
+    "count": 1,
+    "id": "teacraft:tea_bush"
+  }
+}

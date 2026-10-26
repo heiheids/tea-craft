@@ -1,0 +1,248 @@
+{
+    "textures":  {
+                     "particle":  "teacraft:block/tea_set_porcelain_plain",
+                     "porc":  "teacraft:block/tea_set_porcelain_side",
+                     "band":  "teacraft:block/tea_set_porcelain_band",
+                     "porc_plain":  "teacraft:block/tea_set_porcelain_plain",
+                     "porc_inner":  "teacraft:block/tea_set_porcelain_inner",
+                     "porc_top":  "teacraft:block/tea_set_porcelain_top",
+                     "tea":  "teacraft:block/tea_set_tea"
+                 },
+    "display":  {
+                    "gui":  {
+                                "rotation":  [
+                                                 30,
+                                                 225,
+                                                 0
+                                             ],
+                                "translation":  [
+                                                    0,
+                                                    0,
+                                                    0
+                                                ],
+                                "scale":  [
+                                              1.56,
+                                              1.56,
+                                              1.56
+                                          ]
+                            },
+                    "ground":  {
+                                   "rotation":  [
+                                                    0,
+                                                    0,
+                                                    0
+                                                ],
+                                   "translation":  [
+                                                       0,
+                                                       2,
+                                                       0
+                                                   ],
+                                   "scale":  [
+                                                 0.624,
+                                                 0.624,
+                                                 0.624
+                                             ]
+                               },
+                    "fixed":  {
+                                  "rotation":  [
+                                                   0,
+                                                   0,
+                                                   0
+                                               ],
+                                  "translation":  [
+                                                      0,
+                                                      0,
+                                                      0
+                                                  ],
+                                  "scale":  [
+                                                1.248,
+                                                1.248,
+                                                1.248
+                                            ]
+                              },
+                    "thirdperson_righthand":  {
+                                                  "rotation":  [
+                                                                   75,
+                                                                   45,
+                                                                   0
+                                                               ],
+                                                  "translation":  [
+                                                                      0,
+                                                                      2.5,
+                                                                      0
+                                                                  ],
+                                                  "scale":  [
+                                                                0.936,
+                                                                0.936,
+                                                                0.936
+                                                            ]
+                                              },
+                    "firstperson_righthand":  {
+                                                  "rotation":  [
+                                                                   0,
+                                                                   45,
+                                                                   0
+                                                               ],
+                                                  "translation":  [
+                                                                      0,
+                                                                      1.5,
+                                                                      0
+                                                                  ],
+                                                  "scale":  [
+                                                                1.17,
+                                                                1.17,
+                                                                1.17
+                                                            ]
+                                              }
+                },
+    "elements":  [
+                     {
+                         "from":  [
+                                      6.41,
+                                      6.8,
+                                      6.41
+                                  ],
+                         "to":  [
+                                    9.59,
+                                    7.28,
+                                    9.59
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "up":  {
+                                                  "texture":  "#porc_inner"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      6.4,
+                                      7.29,
+                                      6.4
+                                  ],
+                         "to":  [
+                                    9.6,
+                                    9.19,
+                                    6.9
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_inner"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      6.4,
+                                      7.29,
+                                      9.1
+                                  ],
+                         "to":  [
+                                    9.6,
+                                    9.19,
+                                    9.6
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_inner"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      6.4,
+                                      7.29,
+                                      6.9
+                                  ],
+                         "to":  [
+                                    6.9,
+                                    9.19,
+                                    9.1
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_inner"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      9.1,
+                                      7.29,
+                                      6.9
+                                  ],
+                         "to":  [
+                                    9.6,
+                                    9.19,
+                                    9.1
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_inner"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc"
+                                                }
+                                   }
+                     }
+                 ]
+}

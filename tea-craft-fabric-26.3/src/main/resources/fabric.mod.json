@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "teacraft",
+  "version": "${version}",
+  "name": "茶工艺",
+  "description": "Tea Craft - plant tea bushes, harvest fresh leaves by biome, and process them into green tea, black tea and Phoenix Dancong oolong.\nAuthor: bilibili 黑山大叔",
+  "authors": [
+    "bilibili 黑山大叔"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.heishandashu.teacraft.TeaCraft"
+    ],
+    "client": [
+      "com.heishandashu.teacraft.client.TeaCraftClient"
+    ]
+  },
+  "mixins": [
+    "teacraft.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.5",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

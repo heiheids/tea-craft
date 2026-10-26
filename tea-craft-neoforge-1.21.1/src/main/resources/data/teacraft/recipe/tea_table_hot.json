@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "teacraft_tea_table_hot",
+  "ingredients": [
+    {
+      "item": "teacraft:tea_table"
+    },
+    {
+      "item": "minecraft:magma_block"
+    }
+  ],
+  "result": {
+    "id": "teacraft:tea_table_hot",
+    "count": 1
+  }
+}

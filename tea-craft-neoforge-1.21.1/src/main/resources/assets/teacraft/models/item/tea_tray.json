@@ -1,0 +1,20 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "teacraft:item/tea_tray_icon_0"
+  },
+  "overrides": [
+    {
+      "predicate": { "custom_model_data": 1 },
+      "model": "teacraft:item/tea_tray_icon_1"
+    },
+    {
+      "predicate": { "custom_model_data": 2 },
+      "model": "teacraft:item/tea_tray_icon_2"
+    },
+    {
+      "predicate": { "custom_model_data": 3 },
+      "model": "teacraft:item/tea_tray_icon_3"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "teacraft:block/clay_kiln" },
+    "facing=east":  { "model": "teacraft:block/clay_kiln", "y": 90 },
+    "facing=south": { "model": "teacraft:block/clay_kiln", "y": 180 },
+    "facing=west":  { "model": "teacraft:block/clay_kiln", "y": 270 }
+  }
+}

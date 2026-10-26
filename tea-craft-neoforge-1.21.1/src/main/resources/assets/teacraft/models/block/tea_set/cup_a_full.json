@@ -1,0 +1,181 @@
+{
+    "textures":  {
+                     "particle":  "teacraft:block/tea_set_wood",
+                     "wood":  "teacraft:block/tea_set_wood",
+                     "floor":  "teacraft:block/tea_set_floor",
+                     "porc":  "teacraft:block/tea_set_porcelain_side",
+                     "band":  "teacraft:block/tea_set_porcelain_band",
+                     "porc_plain":  "teacraft:block/tea_set_porcelain_plain",
+                     "porc_inner":  "teacraft:block/tea_set_porcelain_inner",
+                     "porc_top":  "teacraft:block/tea_set_porcelain_top",
+                     "leaf":  "teacraft:block/tea_set_leaf",
+                     "tea":  "teacraft:block/tea_set_tea"
+                 },
+    "elements":  [
+                     {
+                         "from":  [
+                                      1.21,
+                                      1.01,
+                                      9.91
+                                  ],
+                         "to":  [
+                                    4.3900000000000006,
+                                    1.49,
+                                    13.09
+                                ],
+                         "faces":  {
+                                       "down":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "up":  {
+                                                  "texture":  "#porc_inner"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1.2,
+                                      1.5,
+                                      9.9
+                                  ],
+                         "to":  [
+                                    4.4,
+                                    3.4,
+                                    10.4
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_inner"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1.2,
+                                      1.5,
+                                      12.6
+                                  ],
+                         "to":  [
+                                    4.4,
+                                    3.4,
+                                    13.1
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_inner"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_plain"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_plain"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1.2,
+                                      1.5,
+                                      10.4
+                                  ],
+                         "to":  [
+                                    1.7,
+                                    3.4,
+                                    12.6
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc_inner"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      3.9,
+                                      1.5,
+                                      10.4
+                                  ],
+                         "to":  [
+                                    4.4,
+                                    3.4,
+                                    12.6
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#porc_top"
+                                              },
+                                       "north":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "south":  {
+                                                     "texture":  "#porc_plain"
+                                                 },
+                                       "west":  {
+                                                    "texture":  "#porc_inner"
+                                                },
+                                       "east":  {
+                                                    "texture":  "#porc"
+                                                }
+                                   }
+                     },
+                     {
+                         "from":  [
+                                      1.7,
+                                      1.5,
+                                      10.4
+                                  ],
+                         "to":  [
+                                    3.9,
+                                    2.55,
+                                    12.6
+                                ],
+                         "faces":  {
+                                       "up":  {
+                                                  "texture":  "#tea"
+                                              }
+                                   }
+                     }
+                 ]
+}

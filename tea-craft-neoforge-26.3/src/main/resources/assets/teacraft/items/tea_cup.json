@@ -1,0 +1,16 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "property": "minecraft:has_component",
+    "component": "teacraft:tea_brew",
+    "ignore_default": true,
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "teacraft:item/tea_cup_full"
+    },
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "teacraft:item/tea_cup"
+    }
+  }
+}

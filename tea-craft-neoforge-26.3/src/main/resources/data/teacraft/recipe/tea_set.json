@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "tea_craft",
+  "category": "misc",
+  "pattern": [
+    "#B#"
+  ],
+  "key": {
+    "#": "#minecraft:wooden_slabs",
+    "B": "minecraft:bamboo"
+  },
+  "result": {
+    "count": 1,
+    "id": "teacraft:tea_set"
+  }
+}

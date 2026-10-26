@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.heishandashu.teacraft.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "InstantBreakSwingMixin",
+    "MobTargetingMixin",
+    "PlayerExhaustionMixin",
+    "SwingDurationMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

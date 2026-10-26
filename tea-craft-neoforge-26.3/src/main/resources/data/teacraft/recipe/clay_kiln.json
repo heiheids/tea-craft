@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "group": "teacraft_clay_kiln",
+  "key": {
+    "B": "minecraft:bricks"
+  },
+  "pattern": [
+    "BBB",
+    "B B",
+    "BBB"
+  ],
+  "result": {
+    "id": "teacraft:clay_kiln",
+    "count": 1
+  }
+}

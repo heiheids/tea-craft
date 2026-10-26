@@ -1,0 +1,43 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+
+# 茶工艺 · 26.3 NeoForge 版（第四支，2026-10-26 起）
+#
+# ⚠ 版本范围是「离线缓存里有的那个构建」：26.3.0.67-beta。
+#   目标实例跑的是 NeoForge 26.3.0.86，它满足 `[26.3.0.67-beta,)` 这个下界 —— 能装。
+#   代价：编译用的是 0.67-beta 的 API，而 0.86 是同一 MC 版本里更晚的 beta 构建，
+#   存在少量 API 漂移风险，所以装好后必须在实例里实测。
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "茶工艺 Tea Craft"
+authors = "bilibili 黑山大叔"
+description = '''
+Tea Craft - grow tea by climate, process it through three real
+production chains (green tea / black tea / Phoenix Dancong),
+then brew and serve it with a full set of tea furniture.
+Author: bilibili 黑山大叔
+'''
+
+[[dependencies.teacraft]]
+modId = "neoforge"
+type = "required"
+versionRange = "[26.3.0.67-beta,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.teacraft]]
+modId = "minecraft"
+type = "required"
+versionRange = "[26.3,26.4)"
+ordering = "NONE"
+side = "BOTH"
+
+# ⚠⚠ 这一段**必须有**，否则 mixin 永远不生效、**而且不报错**
+# （NeoForge 不像 Fabric 那样从 mod json 里读 mixin 列表）。
+#
+# 2026-10-18 在泡世界那支真踩到：漏了这一段之后，服务端能起来、自检大部分 PASS，
+# 但所有 mixin 行为静默失效。
+[[mixins]]
+config = "teacraft.mixins.json"

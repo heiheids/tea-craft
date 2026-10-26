@@ -1,0 +1,62 @@
+// 茶工艺 / Tea Craft —— Minecraft 26.3 Fabric
+/*
+ * 26.x 起 Minecraft 本体不再混淆（1.21.11 是最后一个混淆版本），因此这里：
+ *   * 插件用不重映射的 net.fabricmc.fabric-loom（没有 -remap 后缀）
+ *   * 不写 mappings 行（26.1+ 加了反而报错）
+ *   * 依赖用 implementation，不是 modImplementation
+ *   * jar 任务就是 jar，不是 remapJar
+ * 详见 mod_context.md 的「多版本兼容」一节。
+ */
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'maven-publish'
+}
+
+base {
+	archivesName = "${project.archives_base_name}-fabric-${project.minecraft_version}"
+}
+
+loom {
+	mods {
+		"teacraft" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+	filteringCharset = "UTF-8"
+	filesMatching("fabric.mod.json") {
+		// 只做字面量替换：用 Groovy 模板展开会把 \n 还原成真换行，产出非法 JSON
+		filter { String line -> line.replace('${version}', version.toString()) }
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			from components.java
+		}
+	}
+	repositories {
+	}
+}

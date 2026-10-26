@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "group": "teacraft_guide",
+  "ingredients": [
+    {
+      "item": "teacraft:tea_bush"
+    },
+    {
+      "item": "minecraft:book"
+    }
+  ],
+  "result": {
+    "id": "teacraft:tea_guide",
+    "count": 1
+  }
+}

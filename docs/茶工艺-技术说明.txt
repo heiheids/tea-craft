@@ -1,0 +1,353 @@
+================================================================
+茶工艺 / Tea Craft —— 技术说明
+================================================================
+
+作者：bilibili 黑山大叔
+
+双版本实现：
+  Minecraft 26.3   Fabric       tea-craft-fabric-26.3-1.4.12
+  Minecraft 1.21.1 NeoForge     tea-craft-neoforge-1.21.1-1.1.6
+
+
+----------------------------------------------------------------
+一、工程结构
+----------------------------------------------------------------
+
+D:\工程-茶工艺\              26.3 Fabric 版
+D:\工程-茶工艺-nf1211\       1.21.1 NeoForge 版
+
+两个工程是独立的，代码结构几乎一一对应，但 API 差异很大，
+不能直接共享源文件。
+
+----------------------------------------------------------------
+二、构建环境
+----------------------------------------------------------------
+
+【26.3 版】
+  JDK      25        D:\工程-泡世界\mcmod\tools\jdk25
+  Loom     1.18.3
+  Loader   0.19.5
+  Fabric API 0.162.0+26.3
+
+  构建命令（必须在工程目录下）：
+    set JAVA_HOME=D:\工程-泡世界\mcmod\tools\jdk25
+    gradlew.bat build --offline --console=plain --no-daemon
+
+  产物：build\libs\tea-craft-fabric-26.3-1.4.12.jar
+
+【1.21.1 版】
+  JDK      21        D:\工程-泡世界\mcmod\tools\jdk21\jdk-21.0.12.1+1
+  NeoForge 21.1.256
+  ModDevGradle 2.0.148
+
+  构建命令：
+    set JAVA_HOME=D:\工程-泡世界\mcmod\tools\jdk21\jdk-21.0.12.1+1
+    gradlew.bat build --offline --console=plain --no-daemon
+
+  产物：build\libs\tea-craft-neoforge-1.21.1-1.1.6.jar
+
+【共享 Gradle 缓存】
+  GRADLE_USER_HOME=D:\工程-泡世界\mcmod\.gradle-home
+
+  两个工程共用，避免重复下载。
+  注意：1.21.1 不能跑 runServer（需要 DevLaunch，
+  maven.neoforged.net 连接超时），只能 build。
+
+
+----------------------------------------------------------------
+三、自检系统（仅 26.3）
+----------------------------------------------------------------
+
+26.3 版有一套运行时自检，启动服务端时执行全部断言。
+
+  运行：
+    set TEACRAFT_SELFCHECK=1
+    gradlew.bat runServer --offline --console=plain --no-daemon
+
+  输出形如：
+    [teacraft] TEST xxx -> PASS / FAIL  说明
+    [teacraft] ===== 自检结束 pass=1018 fail=0 skip=0 =====
+
+  当前规模：1029 项断言，覆盖 585 个 check/checkSource 调用点。
+
+【自检的意义】
+  本项目大量 bug 是「编译能过、进游戏才炸」，例如：
+    - 实体没注册渲染器 → 渲染线程 NPE 崩溃
+    - 菜单没传 buf → 客户端 readBlockPos NPE
+    - 语言键缺失 → 物品名显示成 item.teacraft.xxx
+    - items/ 指向错误 → display 变换不生效
+  这些全部靠自检拦住。
+
+【断言写法原则】
+  1. 优先测真实行为，不要测「我记得我写了」
+     错误示范：new ItemStack(...), set 组件, 再读回来 —— 这什么都没验证
+     正确示范：真的在世界里 setBlock，再调真实方法看结果
+
+  2. 运行时问题用源码守卫（checkSource）
+     例如「必须存在 player.getEyeY()」这种，无法从运行时状态反推
+
+  3. 反向断言同样重要
+     例如「不能出现 drainAll()」防的是「以后又改回旧行为」
+
+  4. 破坏性验证
+     写完断言后，故意改坏代码，确认断言真的会红。
+     曾经出现断言写太松、改坏了也不报警的情况。
+
+【1.21.1 没有自检】
+  那边的正确性只能靠编译 + 人工实测。
+  这是一个明确的短板。
+
+
+----------------------------------------------------------------
+四、核心数据结构
+----------------------------------------------------------------
+
+【TeaKind】三种茶
+  GREEN   ("green",   "绿茶",     6)
+  BLACK   ("black",   "红茶",     6)
+  DANCONG ("dancong", "凤凰单丛", 6)
+
+【TeaOrigin】五个产地等级
+  TROPICAL     ("tropical",     "热带",   1.10f)
+  SUBTROPICAL  ("subtropical",  "亚热带", 0.85f)
+  TEMPERATE    ("temperate",    "温带",   0.55f)
+  BOREAL       ("boreal",       "寒带",   0.15f)
+  POLAR        ("polar",        "极寒",   -INF)
+
+  minTemperature 是群系基础温度的下界，逐级匹配。
+  quality = 1..5（热带最低，极寒最高）
+  minutesFor(q) = 20 * q  →  20/40/60/80/100
+
+  needsCampfire() 只对 BOREAL / POLAR 返回 true。
+
+【TeaStages】阶段链
+  record Stage(TeaKind kind, int number, String id, String process)
+  isFinished() = kind != null && number == kind.lastStage()
+
+  共享阶段：spread_2_withered（第 2 阶段，三条路线共用，
+  kind == null，因此永远不是成品）
+
+【产地携带】
+  产地信息存在物品组件里（TeaComponents.origin）。
+  从采茶 → 加工 → 成品，全程跟着物品走。
+  这是修过的 bug：早期所有茶都变成温带。
+
+
+----------------------------------------------------------------
+五、方块与方块实体清单
+----------------------------------------------------------------
+
+  方块                    方块实体              功能
+  ----------------------  --------------------  ----------------
+  tea_bush                -                     茶树，可采摘
+  tea_tray                TeaTrayBlockEntity    晒盘
+  tea_rolling_tray        TeaTrayBlockEntity    揉茶匾（同为 TRAY_BE_TYPE）
+  tea_charcoal_stove      StoveBlockEntity      碳焙筐
+  tea_wok                 WokBlockEntity        炒茶锅
+  tea_set                 TeaSetBlockEntity     茶盘
+  tea_table               -                     茶桌（满格）
+  tea_table_hot           -                     烧水茶桌（热源）
+  tea_box                 TeaBoxBlockEntity     茶盒（27 格 x 999）
+  tea_chair               -                     茶椅
+  clay_kiln               ClayKilnBlockEntity   窑炉
+  potter_wheel            PotterWheelBlockEntity 拉坯机
+  teapot                  -                     茶壶（装饰）
+  kettle                  KettleBlockEntity     烧水壶
+
+  特殊实体：
+  tea_seat                TeaSeatEntity         茶椅座位（隐形、无碰撞）
+
+
+----------------------------------------------------------------
+六、较复杂的三处实现
+----------------------------------------------------------------
+
+【6.1 茶椅：怎么让玩家坐下】
+  方块本身不能当载具。做法：
+    1. 右键茶椅 → 生成一个 TeaSeatEntity
+    2. player.startRiding(seat, true, true)   // 26.3 三参
+    3. 座位实体 tick() 检查：没有乘客 或 椅子没了 → 自我销毁
+    4. 椅子被移除 → affectNeighborsAfterRemoval → ejectAt() 把玩家踢下来
+
+  座位实体必须注册渲染器（EmptyEntityRenderer），
+  即使它完全不可见。原因见「踩坑」第 1 条。
+
+  碰撞箱只到椅面（9.5/16 = 0.594 格），椅背无碰撞，
+  所以能从背后走过去。
+
+【6.2 茶盒：999 上限怎么存】
+  原版 ItemStack 上限 99，存不下 999。所以不用原版 Container：
+
+    槽位 = 物品 id + 数量(int)      // 自己管理
+
+  界面槽位（BoxSlot）对外只暴露「1 个」的展示栈；
+  真实数量存方块实体；取物品时才生成真正的 ItemStack（每次 <= 64）。
+
+  代价：
+    - clicked() 全部手写，不经过原版 Slot 逻辑
+    - 数量显示要自己处理（用 renderItemDecorations 传文本）
+    - tooltip 要显式补调用（1.21.1）
+
+【6.3 茶盘：坐在椅子上点不准】
+  茶盘碰撞箱是满宽 x 3 像素。站着俯视时射线打顶面，坐标正确；
+  坐在茶椅上时眼高约 0.6 格，与盘面齐平，射线打侧面 ——
+  侧面点的一个坐标被钉在方块边缘，永远落在盘沿，点不到茶具。
+
+  解法：乘上「眼睛到命中点」的方向，把射线延长到盘面高度 y=3，
+  用那个交点当点击位置。这样俯视/平视都对应玩家实际瞄准的位置。
+
+  另外加了保护：普通右键点空 → 什么都不做；
+  潜行右键才拿整盘。彻底避免误拿。
+
+
+----------------------------------------------------------------
+七、关键配置
+----------------------------------------------------------------
+
+  26.3 runServer 用 run\server.properties，端口 25599。
+  不要动 D:\工程-泡世界\bubbleworld 的 25565 服务器。
+
+  gradle.properties: org.gradle.jvmargs=-Xmx3G
+  堆内存吃紧时（strata.exe 等重进程）会报 errno=1455「页文件太小」。
+
+
+----------------------------------------------------------------
+八、资源文件结构（两版差异）
+----------------------------------------------------------------
+
+  26.3 需要两套：
+    assets/teacraft/items/<name>.json      物品定义（26.3 专用）
+    assets/teacraft/models/item/<name>.json 模型 + display
+
+  items/<name>.json 是入口，必须指向 item/<name>，
+  否则 display 变换完全不生效。（见踩坑第 4 条）
+
+  1.21.1 只有 models/item/，不需要 items/ 目录。
+
+  26.3 的 items/ 支持组合结构：
+    range_dispatch（按 custom_model_data 切换）
+    condition（按组件/使用状态切换）
+  茶盘、晒盘、盖碗、茶杯都用了这套来切换「空/有内容」图标。
+
+
+================================================================
+
+
+----------------------------------------------------------------
+九、茶盒「挖掉不丢茶叶」的实现
+----------------------------------------------------------------
+
+需求：
+  玩家直接挖掉茶盒时，里面的 27 格茶叶不能丢，要跟着掉落物走。
+
+错误做法（都试过）：
+  getDrops(...)                     —— 是 static 方法，不能覆写
+  affectNeighborsAfterRemoval(...)  —— 触发太晚，方块实体可能已经没了
+  playerWillDestroy + 暂存 Map      —— 可行但要多维护一个 Map，且 getDrops
+                                       仍是 static，拦不住默认掉落
+
+正确做法：覆写 playerDestroy
+  public void playerDestroy(ServerLevel/Level level, Player player,
+                            BlockPos pos, BlockState state,
+                            BlockEntity be, ItemStack tool)
+
+  它是唯一同时满足三个条件的钩子：
+    1. 能拿到 BlockEntity 参数（此时数据还在）
+    2. 是实例方法，可以覆写
+    3. 掉什么由我们自己决定
+
+  实现要点：
+    - 不调 super（默认实现会 dropResources，掉一个空茶盒）
+    - 自己 new ItemStack(茶盒)，saveWithId / saveWithoutMetadata 写入数据
+    - BlockItem.setBlockEntityData(stack, box.getType(), tag)
+    - Block.popResource(level, pos, drop)
+    - 创造模式直接 return（保持原版不掉落）
+
+  两版差异：
+    26.3  : playerDestroy(ServerLevel, ServerPlayer, BlockPos, BlockState,
+                          BlockEntity, ItemStack)
+            saveWithId(TagValueOutput) + setBlockEntityData(stack, type, TagValueOutput)
+    1.21.1: playerDestroy(Level, Player, BlockPos, BlockState,
+                          BlockEntity, ItemStack)
+            saveWithoutMetadata(Provider) + setBlockEntityData(stack, type, CompoundTag)
+
+  数据恢复：
+    放置时由 setPlacedBy 读取 BLOCK_ENTITY_DATA，调 box.loadAdditional(...)。
+    这条路径和「潜行右键拿起茶盒」共用，所以两种取回方式行为一致。
+
+  自检断言（4 条）：
+    tea_box_saves_data_on_break    playerDestroy 里必须先 saveWithId 再写物品
+    tea_box_no_super_on_break      不能调 super（否则多掉一个空茶盒）
+    tea_box_break_drops_resource   要自己 popResource
+    tea_box_break_keeps_creative   创造模式不掉落
+
+  注意第一条断言的写法：
+    不能用 contains("setBlockEntityData") —— setPlacedBy 里也有这处调用，
+    注释里也有这个词，会假绿。必须用完整语句 + indexOf 限定起点。
+
+================================================================
+
+
+----------------------------------------------------------------
+十、26.3 NeoForge 版（第四支工程）
+----------------------------------------------------------------
+
+工程目录   D:\工程-茶工艺-nf263
+产物       tea-craft-neoforge-26.3-1.4.12.jar
+目标实例   D:\26.3F\.minecraft\versions\26.3-NeoForge086
+
+【构建】
+  JDK 25      D:\工程-泡世界\mcmod\tools\jdk25
+  NeoForge    26.3.0.67-beta（离线缓存里只有这个构建）
+  NeoForm     26.3-1
+  ModDevGradle 2.0.148
+
+  set JAVA_HOME=...\jdk25
+  set GRADLE_USER_HOME=...\mcmod\.gradle-home
+  gradlew.bat build --offline
+
+  注意：`gradlew runServer` 在本支不可用（要下 moddev-config.json，
+  那个站连不上）。启动验证用 tools/run-server.ps1。
+
+【和 26.3 Fabric 支的关系】
+  MC 那一层的代码（方块/物品/方块实体/工艺逻辑）完全同一份，
+  只有**加载器层**换了写法：
+
+    功能            Fabric 支                    本支
+    --------------  ----------------------------  ----------------------------
+    模组入口        ModInitializer                @Mod 构造方法
+    注册            立即写 BuiltInRegistries      DeferredRegister（延迟绑定）
+    客户端入口      ClientModInitializer          @Mod(dist=CLIENT) 构造方法
+    HUD             HudElementRegistry            RenderGuiEvent.Post
+    界面绑定        MenuScreensInvoker(Mixin)     RegisterMenuScreensEvent
+    实体渲染器      EntityRendererRegistry        EntityRenderersEvent
+    右键方块事件    UseBlockCallback              PlayerInteractEvent
+    僵尸装备        ServerEntityEvents            EntityJoinLevelEvent
+    僵尸掉落        ALLOW_DEATH + AFTER_DEATH     LivingDropsEvent
+    服务端启动      SERVER_STARTED                ServerStartedEvent
+
+【三个「只在启动时炸」的坑】（详见经验总结第 21 条）
+  1. DeferredRegister 必须声明在类最前面（静态字段按书写顺序初始化）
+  2. 静态块里不能调 .get()（holder 还没绑）→ 移到 FMLCommonSetupEvent
+  3. 注册器必须 EFFECTS.register(modBus)，否则 Holder 永远 unbound
+
+【资源结构】
+  和 Fabric 支相同：items/ + models/item/ + models/block/ + blockstates/
+  （不像 1.21.1 那样只有 models/item/）
+
+【mods.toml 要点】
+  minecraft  = "[26.3,26.4)"
+  neoforge   = "[26.3.0.67-beta,)"    ← 0.86 满足这个下界
+  [[mixins]] config = "teacraft.mixins.json"
+  ⚠ 这段必须有，否则 mixin 静默失效
+
+【验证结果】
+  服务端         Done (2.277s)
+  自检（全新世界）pass=1029 fail=0 skip=0
+  资源           15 blockstates / 60 block 模型 / 54 item 模型 /
+                 41 items / 108 贴图 / 10 配方 / 111 class
+
+  自检里有一条因「世界群系不降水」而显式跳过
+  （tray_stops_when_raining_open_sky），理由写在代码注释里。
+
+================================================================

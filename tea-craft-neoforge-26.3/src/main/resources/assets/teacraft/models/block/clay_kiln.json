@@ -1,0 +1,202 @@
+{
+  "textures": {
+    "particle": "teacraft:block/clay_kiln_brick",
+    "brick": "teacraft:block/clay_kiln_brick",
+    "top": "teacraft:block/clay_kiln_top",
+    "chimney": "teacraft:block/clay_kiln_chimney",
+    "chimney_hole": "teacraft:block/clay_kiln_chimney_hole",
+    "door": "teacraft:block/clay_kiln_door",
+    "metal": "teacraft:block/clay_kiln_metal",
+    "base": "teacraft:block/clay_kiln_base",
+    "foot": "teacraft:block/clay_kiln_foot"
+  },
+  "elements": [
+    {
+      "from": [1.5, 0, 1.5],
+      "to": [3.2, 1.4, 3.2],
+      "faces": {
+        "down": { "texture": "#foot" },
+        "north": { "texture": "#foot" },
+        "south": { "texture": "#foot" },
+        "west": { "texture": "#foot" },
+        "east": { "texture": "#foot" }
+      }
+    },
+    {
+      "from": [12.8, 0, 1.5],
+      "to": [14.5, 1.4, 3.2],
+      "faces": {
+        "down": { "texture": "#foot" },
+        "north": { "texture": "#foot" },
+        "south": { "texture": "#foot" },
+        "west": { "texture": "#foot" },
+        "east": { "texture": "#foot" }
+      }
+    },
+    {
+      "from": [1.5, 0, 12.8],
+      "to": [3.2, 1.4, 14.5],
+      "faces": {
+        "down": { "texture": "#foot" },
+        "north": { "texture": "#foot" },
+        "south": { "texture": "#foot" },
+        "west": { "texture": "#foot" },
+        "east": { "texture": "#foot" }
+      }
+    },
+    {
+      "from": [12.8, 0, 12.8],
+      "to": [14.5, 1.4, 14.5],
+      "faces": {
+        "down": { "texture": "#foot" },
+        "north": { "texture": "#foot" },
+        "south": { "texture": "#foot" },
+        "west": { "texture": "#foot" },
+        "east": { "texture": "#foot" }
+      }
+    },
+    {
+      "from": [1.45, 1.4, 1.45],
+      "to": [14.55, 2.2, 14.55],
+      "faces": {
+        "down": { "texture": "#base" },
+        "up": { "texture": "#base" },
+        "north": { "texture": "#base" },
+        "south": { "texture": "#base" },
+        "west": { "texture": "#base" },
+        "east": { "texture": "#base" }
+      }
+    },
+    {
+      "from": [1.6, 2.2, 1.6],
+      "to": [14.4, 12.4, 14.4],
+      "faces": {
+        "down": { "texture": "#brick" },
+        "up": { "texture": "#brick" },
+        "north": { "texture": "#brick" },
+        "south": { "texture": "#brick" },
+        "west": { "texture": "#brick" },
+        "east": { "texture": "#brick" }
+      }
+    },
+    {
+      "from": [0.6, 12.4, 0.6],
+      "to": [15.4, 13.6, 15.4],
+      "faces": {
+        "down": { "texture": "#top" },
+        "up": { "texture": "#top" },
+        "north": { "texture": "#top" },
+        "south": { "texture": "#top" },
+        "west": { "texture": "#top" },
+        "east": { "texture": "#top" }
+      }
+    },
+    {
+      "from": [5.4, 13.6, 5.4],
+      "to": [10.6, 14.0, 10.6],
+      "faces": {
+        "down": { "texture": "#chimney" },
+        "up": { "texture": "#chimney" },
+        "north": { "texture": "#chimney" },
+        "south": { "texture": "#chimney" },
+        "west": { "texture": "#chimney" },
+        "east": { "texture": "#chimney" }
+      }
+    },
+    {
+      "from": [6.2, 14.0, 6.2],
+      "to": [9.8, 15.4, 9.8],
+      "faces": {
+        "down": { "texture": "#chimney" },
+        "up": { "texture": "#chimney" },
+        "north": { "texture": "#chimney" },
+        "south": { "texture": "#chimney" },
+        "west": { "texture": "#chimney" },
+        "east": { "texture": "#chimney" }
+      }
+    },
+    {
+      "from": [5.8, 15.4, 5.8],
+      "to": [10.2, 15.9, 10.2],
+      "faces": {
+        "down": { "texture": "#chimney" },
+        "up": { "texture": "#chimney" },
+        "north": { "texture": "#chimney" },
+        "south": { "texture": "#chimney" },
+        "west": { "texture": "#chimney" },
+        "east": { "texture": "#chimney" }
+      }
+    },
+    {
+      "from": [6.7, 15.9, 6.7],
+      "to": [9.3, 16.0, 9.3],
+      "faces": {
+        "up": { "texture": "#chimney_hole" },
+        "north": { "texture": "#chimney_hole" },
+        "south": { "texture": "#chimney_hole" },
+        "west": { "texture": "#chimney_hole" },
+        "east": { "texture": "#chimney_hole" }
+      }
+    },
+    {
+      "from": [3.4, 3.0, 0.9],
+      "to": [12.6, 10.6, 1.7],
+      "faces": {
+        "north": { "texture": "#door" },
+        "south": { "texture": "#door" },
+        "west": { "texture": "#door" },
+        "east": { "texture": "#door" },
+        "up": { "texture": "#door" },
+        "down": { "texture": "#door" }
+      }
+    },
+    {
+      "from": [2.9, 3.4, 0.86],
+      "to": [3.3, 10.6, 1.0],
+      "faces": {
+        "north": { "texture": "#metal" },
+        "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" },
+        "east": { "texture": "#metal" },
+        "up": { "texture": "#metal" },
+        "down": { "texture": "#metal" }
+      }
+    },
+    {
+      "from": [3.3, 4.8, 0.5],
+      "to": [3.6, 5.8, 0.88],
+      "faces": {
+        "north": { "texture": "#metal" },
+        "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" },
+        "east": { "texture": "#metal" },
+        "up": { "texture": "#metal" },
+        "down": { "texture": "#metal" }
+      }
+    },
+    {
+      "from": [3.3, 8.2, 0.5],
+      "to": [3.6, 9.2, 0.88],
+      "faces": {
+        "north": { "texture": "#metal" },
+        "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" },
+        "east": { "texture": "#metal" },
+        "up": { "texture": "#metal" },
+        "down": { "texture": "#metal" }
+      }
+    },
+    {
+      "from": [10.4, 6.4, 0.2],
+      "to": [13.9, 7.3, 0.88],
+      "faces": {
+        "north": { "texture": "#metal" },
+        "south": { "texture": "#metal" },
+        "west": { "texture": "#metal" },
+        "east": { "texture": "#metal" },
+        "up": { "texture": "#metal" },
+        "down": { "texture": "#metal" }
+      }
+    }
+  ]
+}

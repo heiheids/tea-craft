@@ -1,0 +1,27 @@
+// 茶工艺 · 26.3 NeoForge 版（第四支工程，2026-10-26 起）
+//
+// 为什么是**第四支**而不是复用现有三支：
+//   * tea-craft                = 26.3 + **Fabric**（加载器层完全不同的 API）
+//   * tea-craft-nf1211         = **1.21.1** + NeoForge（MC API 是上一代）
+//   * 本工程                   = 26.3 + NeoForge
+//                                目标实例 D:\26.3F\.minecraft\versions\26.3-NeoForge086
+//
+// 好处：MC 那一层的代码可以直接用 26.3 Fabric 支的（同一代 API），
+// 只有**加载器层**（入口/事件/注册表/网络/按键/HUD/数据加载）要换成 NeoForge 的写法。
+//
+// 离线构建（maven.neoforged.net 连不上，产物全部来自 Gradle 缓存）：
+//   $env:JAVA_HOME="...\mcmod\tools\jdk25"
+//   $env:GRADLE_USER_HOME="...\mcmod\.gradle-home"
+//   .\gradlew.bat build --offline
+pluginManagement {
+    repositories {
+        maven {
+            name = 'NeoForged'
+            url = 'https://maven.neoforged.net/releases'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'tea-craft-neoforge-26.3'

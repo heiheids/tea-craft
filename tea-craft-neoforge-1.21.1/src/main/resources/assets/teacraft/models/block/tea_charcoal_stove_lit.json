@@ -1,0 +1,33 @@
+{
+  "textures": {
+    "particle": "teacraft:block/tea_charcoal_stove_side",
+    "side": "teacraft:block/tea_charcoal_stove_side",
+    "top": "teacraft:block/tea_charcoal_stove_top_lit",
+    "bottom": "teacraft:block/tea_charcoal_stove_bottom",
+    "iron": "teacraft:block/tea_charcoal_stove_iron_side"
+  },
+  "elements": [
+    {
+      "from": [0, 5, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "up":    { "texture": "#top" },
+        "north": { "texture": "#side", "cullface": "north" },
+        "south": { "texture": "#side", "cullface": "south" },
+        "west":  { "texture": "#side", "cullface": "west" },
+        "east":  { "texture": "#side", "cullface": "east" }
+      }
+    },
+    {
+      "from": [0, 0, 0],
+      "to": [16, 5, 16],
+      "faces": {
+        "north": { "texture": "#iron", "uv": [0, 10, 16, 16] },
+        "south": { "texture": "#iron", "uv": [0, 10, 16, 16] },
+        "west":  { "texture": "#iron", "uv": [0, 10, 16, 16] },
+        "east":  { "texture": "#iron", "uv": [0, 10, 16, 16] },
+        "down":  { "texture": "#bottom", "cullface": "down" }
+      }
+    }
+  ]
+}

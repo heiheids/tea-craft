@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "teacraft_chair",
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "F": {
+      "tag": "minecraft:fences"
+    }
+  },
+  "pattern": [
+    "PPP",
+    "F F"
+  ],
+  "result": {
+    "id": "teacraft:tea_chair",
+    "count": 1
+  }
+}
