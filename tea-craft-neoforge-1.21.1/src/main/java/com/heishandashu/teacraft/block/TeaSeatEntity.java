@@ -27,7 +27,19 @@ public class TeaSeatEntity extends Entity {
     public static EntityType<TeaSeatEntity> TYPE;
 
     /** 绑定的椅子方块坐标。 */
+    /** 绑定的椅子方块坐标。 */
     private BlockPos seatPos = BlockPos.ZERO;
+
+    /**
+     * 生成后的宽限 tick 数。
+     *
+     * <p>见 tick() 的注释：实体加入世界与玩家上车之间有一个窗口，
+     * 这期间 getPassengers() 可能还是空的。10 tick = 0.5 秒。</p>
+     */
+    private static final int SPAWN_GRACE_TICKS = 10;
+
+    /** 剩余的宽限 tick。每 tick 自减。 */
+    private int spawnGrace = SPAWN_GRACE_TICKS;
 
     public TeaSeatEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -58,24 +70,58 @@ public class TeaSeatEntity extends Entity {
     }
 
     /**
-     * 每个 tick 检查：没人坐了自己消失；椅子没了放下乘客并消失。
+     * 每个 tick 检查：
+     * <ol>
+     *   <li>没人坐了 → 自己消失；</li>
+     *   <li>椅子没了（被挖掉/被替换）→ 放下乘客并消失。</li>
+     * </ol>
+     *
+     * <h2>为什么要有「宽限期」</h2>
+     * <p>执行顺序是：</p>
+     * <pre>
+     *   level.addFreshEntity(seat);            // 实体立刻进入世界
+     *   player.startRiding(seat, force, true); // 玩家才上车
+     * </pre>
+     * <p>如果实体在两者之间被 tick 到，getPassengers() 还是空的，
+     * 旧的「无乘客即 discard」逻辑会把座位删掉，玩家一上车就被抛出来。</p>
+     *
+     * <p>所以前 SPAWN_GRACE_TICKS 个 tick 不做「无乘客就销毁」判断。
+     * 0.5 秒足以跨过这个窗口，又不会让废弃座位长期滞留。</p>
      */
     @Override
     public void tick() {
         super.tick();
         if (this.level().isClientSide()) return;
 
+        // 刚生成的前几个 tick：玩家可能还没挂上来，不判「无人」
+        if (spawnGrace-- > 0) {
+            if (chairGone()) {
+                for (Entity rider : this.getPassengers()) {
+                    rider.stopRiding();
+                }
+                this.discard();
+            }
+            return;
+        }
+
+        // 宽限期过后：真的没人坐 → 自己消失
         if (this.getPassengers().isEmpty()) {
             this.discard();
             return;
         }
 
-        if (!(this.level().getBlockState(this.seatPos).getBlock() instanceof TeaChairBlock)) {
+        // 椅子没了 → 放下乘客并消失
+        if (chairGone()) {
             for (Entity rider : this.getPassengers()) {
                 rider.stopRiding();
             }
             this.discard();
         }
+    }
+
+    /** 座位绑定的椅子方块还在不在。 */
+    private boolean chairGone() {
+        return !(this.level().getBlockState(this.seatPos).getBlock() instanceof TeaChairBlock);
     }
 
     /* ---------------- 无关紧要的实现 ---------------- */

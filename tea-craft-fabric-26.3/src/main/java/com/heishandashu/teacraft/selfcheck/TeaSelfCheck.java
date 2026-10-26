@@ -4516,6 +4516,33 @@ public final class TeaSelfCheck {
                 }
                 if (!testSeat.isRemoved()) testSeat.discard();
             }
+
+            // ---------- 真实时序：先 tick 再上车 ----------
+            //
+            // 【这条防的是「坐上去立刻被抛出来」】
+            // 游戏里 addFreshEntity 之后，实体可能在同一 tick 就被 tick 到，
+            // 而此时 startRiding 还没执行 —— getPassengers() 是空的。
+            // 老代码在这个瞬间直接 discard()，玩家一上车就没了座位，于是被抛出。
+            //
+            // 自检里原来只测「上车之后再 tick」，正好绕开了这个时序，所以一直绿。
+            // 这里刻意按真实顺序来：addFreshEntity → tick（还没上车）→ startRiding → tick。
+            var lateSeat = com.heishandashu.teacraft.block.TeaSeatEntity.create(
+                    level, seatBase, testSeatY);
+            if (lateSeat != null) {
+                level.addFreshEntity(lateSeat);
+                lateSeat.tick();       // ← 还没人上车就 tick 一次（模拟真实首帧）
+                check("tea_seat_not_discarded_before_rider",
+                        !lateSeat.isRemoved(),
+                        "座位实体在玩家上车前的一两个 tick 内不该自毁");
+
+                boolean lateRiding = rider.startRiding(lateSeat, true, true);
+                lateSeat.tick();
+                check("tea_chair_sit_survives_first_ticks",
+                        lateRiding && !lateSeat.isRemoved() && rider.isPassenger(),
+                        "按真实时序（先 tick 再上车）玩家也应能坐住");
+                if (rider.isPassenger()) rider.stopRiding();
+                if (!lateSeat.isRemoved()) lateSeat.discard();
+            }
             level.setBlock(seatBase, Blocks.AIR.defaultBlockState(), 3);
         }
 
