@@ -179,11 +179,16 @@ public final class TeaTrayHud implements HudElement {
             progress = -1f;
         } else {
             var be = TeaBushBlock.bushEntityAt(mc.level, pos);
-            long remain = be == null ? -1 : be.remainingTicks();
-            float prog = be == null ? -1f : be.progress();
+            // 客户端也要带上当前 gameTime，倒计时数字才会自己走动。
+            // 服务端把 anchor 存成服务端 gameTime，客户端 level.getGameTime()
+            // 与原版同步机制一致（同一世界时间），所以可以直接相减。
+            long now = mc.level.getGameTime();
+            long remain = be == null ? -1 : be.remainingTicks(now);
+            float prog = be == null ? -1f : be.progress(now);
 
             line1 = remain > 0
-                    ? Component.translatable("teacraft.hud.bush_countdown", formatDuration(remain))
+                    ? Component.translatable("teacraft.hud.bush_countdown",
+                            com.heishandashu.teacraft.core.TeaDurations.format(remain))
                     : Component.translatable("teacraft.hud.bush_growing_stage",
                     Component.translatable("teacraft.bush_age." + age));
             line2 = cold
@@ -195,33 +200,6 @@ public final class TeaTrayHud implements HudElement {
         drawSimplePanel(g, mc, line1, line2, progress, cold ? 0xFF4FC3F7 : 0xFF7BC67B);
     }
 
-    /**
-     * 把 tick 数变成「1 天 3 小时」这样的可读文本。
-     *
-     * <p>一个游戏日 = 24000 tick = 20 分钟现实时间 ⇒ 1200 tick = 1 分钟。</p>
-     */
-    static String formatDuration(long ticks) {
-        if (ticks <= 0) return "0";
-        long totalMinutes = ticks / 1200L;
-        long days = totalMinutes / 20L;
-        long hours = (totalMinutes % 20L) * 24L / 20L;
-        long minutes = totalMinutes % 20L % 60L;
-
-        StringBuilder sb = new StringBuilder();
-        if (days > 0) {
-            sb.append(days).append(Component.translatable("teacraft.unit.day").getString());
-        }
-        if (hours > 0) {
-            sb.append(hours).append(Component.translatable("teacraft.unit.hour").getString());
-        }
-        if (days == 0 && hours == 0) {
-            sb.append(minutes).append(Component.translatable("teacraft.unit.minute").getString());
-        }
-        if (sb.length() == 0) {
-            sb.append(Component.translatable("teacraft.unit.less_than_minute").getString());
-        }
-        return sb.toString();
-    }
 
     /** 两行文字 + 可选进度条的小面板（茶树用）。 */
     private void drawSimplePanel(GuiGraphicsExtractor g, Minecraft mc,
@@ -235,7 +213,9 @@ public final class TeaTrayHud implements HudElement {
         int guiW = g.guiWidth();
         int guiH = g.guiHeight();
         int x = (guiW - panelW) / 2;
-        int y = guiH - 132;
+        // 相对原来的 guiH-132 下移 30 像素（需求：「提示框下移 30 像素」）。
+        // 这样面板离动作栏和血条更近一点，不再顶到屏幕上方的效果图标区。
+        int y = guiH - 102;
 
         g.fill(x, y, x + panelW, y + panelH, BG);
         g.fill(x, y, x + panelW, y + 1, BORDER);

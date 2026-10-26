@@ -361,14 +361,32 @@ public final class TeaSelfCheck {
                     "茶树必须有方块实体（倒计时要存在它里面）");
 
             if (be != null) {
-                be.startGrowing(2);
-                check("bush_countdown_started", be.isGrowing() && be.remainingTicks() == 2,
-                        "倒计时应从 2 开始，实得 " + be.remainingTicks());
+                // 直接把「成熟所需刻数」设成 0 是不行的（startGrowing 会夹到 1），
+                // 所以这里把 total 设成很小的值，并把 anchor 往前推，模拟时间已过。
+                long t0 = level.getGameTime();
+                be.startGrowing(2, t0);
+                check("bush_countdown_started", be.isGrowing() && be.remainingTicks(t0) == 2,
+                        "倒计时应从 2 开始，实得 " + be.remainingTicks(t0));
 
                 if (TeaBushBlock.isTooCold(level, maturePos)) {
                     level.setBlock(maturePos.offset(1, 0, 0),
                             Blocks.CAMPFIRE.defaultBlockState(), 3);
                 }
+
+                // 时间推进 2 tick 后应正好成熟
+                be.advanceTo(t0 + 2, false);
+
+                check("bush_matures_by_game_time",
+                        be.remainingTicks(t0 + 2) == 0,
+                        "经过 2 游戏刻后应到点，实得 " + be.remainingTicks(t0 + 2));
+
+                // 再走真实 tick 路径，确认 age 也被拉到 3。
+                //
+                // 注意：tick() 内部用的是 level.getGameTime()（当前世界时间），
+                // 而上面 advanceTo 传的是「未来」的 t0+2。真实世界里时间会自己走，
+                // 自检里时间不会走，所以这里把 anchor 往前拨 100 刻，
+                // 让「按当前 gameTime 结算」正好算出已到点。
+                be.debugWindBack(100L);
 
                 int guard = 0;
                 while (level.getBlockState(maturePos).getValue(TeaBushBlock.AGE) != TeaBushBlock.AGE_RIPE
@@ -385,10 +403,49 @@ public final class TeaSelfCheck {
             level.setBlock(maturePos, Blocks.AIR.defaultBlockState(), 3);
         }
 
+        // ---------- 倒计时速率必须等于「经过的游戏刻」----------
+        //
+        // 【这条防的是「/tick sprint 推不动茶树」】
+        // 第一版写成「每 20 tick 调一次 tickCountdown，每次 remainingTicks--」。
+        // 于是实际经过 144000 tick（6 游戏日）只推进 7200 —— 慢 20 倍，
+        // 表现就是 sprint 了 6 天茶树依然不成熟。
+        //
+        // 现在改成按 gameTime 的差值推进，这里直接验证：
+        // 走 N 刻，剩余量就必须正好少 N。
+        {
+            BlockPos ratePos = pos.offset(12, 0, 0);
+            level.setBlock(ratePos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(ratePos, TeaItems.TEA_BUSH.defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_TREE), 3);
+
+            var be = TeaBushBlock.bushEntityAt(level, ratePos);
+            if (be != null) {
+                long t0 = level.getGameTime();
+                be.startGrowing(100000, t0);
+
+                // 假装过去了 144000 tick（6 游戏日）
+                long t1 = t0 + 144000L;
+                be.advanceTo(t1, false);
+
+                check("bush_rate_equals_game_ticks",
+                        be.remainingTicks(t1) == 0,
+                        "6 游戏日（144000 刻）必须足够走完 100000 刻的成熟期，"
+                                + "实得剩余 " + be.remainingTicks(t1));
+
+                // 精确速率：走 1000 刻，剩余就该正好少 1000
+                be.startGrowing(50000, t0);
+                be.advanceTo(t0 + 1000L, false);
+                check("bush_rate_linear",
+                        be.remainingTicks(t0 + 1000L) == 49000,
+                        "走 1000 刻后剩余应为 49000，实得 " + be.remainingTicks(t0 + 1000L));
+            }
+            level.setBlock(ratePos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
         // ---------- 太冷暂停 / 取暖恢复 ----------
         //
         // 需求：「太冷暂停生长，有取暖后恢复生长。」
-        // 关键语义是 remainingTicks 不清零，只是不再减少。
+        // 关键语义是：暂停期间游戏刻照走，但不计入进度；恢复后继续累加。
         {
             BlockPos pausePos = pos.offset(6, 0, 0);
             level.setBlock(pausePos.below(), Blocks.DIRT.defaultBlockState(), 3);
@@ -397,16 +454,33 @@ public final class TeaSelfCheck {
 
             var be = TeaBushBlock.bushEntityAt(level, pausePos);
             if (be != null) {
-                be.startGrowing(1000);
+                long t0 = level.getGameTime();
+                be.startGrowing(1000, t0);
 
-                be.tickCountdown(true);        // 太冷
-                check("bush_pause_freezes_countdown", be.remainingTicks() == 1000,
-                        "太冷时倒计时必须停住，实得 " + be.remainingTicks());
+                // 先正常走 100 刻
+                be.advanceTo(t0 + 100L, false);
+                check("bush_progress_before_pause",
+                        be.remainingTicks(t0 + 100L) == 900,
+                        "走 100 刻后剩余应为 900，实得 " + be.remainingTicks(t0 + 100L));
+
+                // 进入太冷：从这一刻停表
+                be.advanceTo(t0 + 100L, true);
                 check("bush_pause_flag_set", be.isPaused(), "暂停标记应为 true");
 
-                be.tickCountdown(false);       // 取暖恢复
-                check("bush_resume_continues", be.remainingTicks() == 999,
-                        "恢复后应从原值继续倒数，实得 " + be.remainingTicks());
+                // 暂停期间又过了 500 刻 —— 进度不能动
+                be.advanceTo(t0 + 600L, true);
+                check("bush_pause_freezes_countdown",
+                        be.remainingTicks(t0 + 600L) == 900,
+                        "太冷期间倒计时必须停住（再走 500 刻仍应是 900），实得 "
+                                + be.remainingTicks(t0 + 600L));
+
+                // 取暖恢复：从恢复那一刻继续累加
+                be.advanceTo(t0 + 600L, false);
+                be.advanceTo(t0 + 700L, false);
+                check("bush_resume_continues",
+                        be.remainingTicks(t0 + 700L) == 800,
+                        "恢复后应从暂停处继续（再走 100 刻剩 800），实得 "
+                                + be.remainingTicks(t0 + 700L));
                 check("bush_pause_flag_cleared", !be.isPaused(), "恢复后暂停标记应清除");
             }
             level.setBlock(pausePos, Blocks.AIR.defaultBlockState(), 3);
@@ -420,6 +494,114 @@ public final class TeaSelfCheck {
         check("harvest_yield_1_to_3",
                 TeaConfig.get().minLeaves == 1 && TeaConfig.get().maxLeaves == 3,
                 TeaConfig.get().minLeaves + "~" + TeaConfig.get().maxLeaves);
+
+        // ---------- 采摘后倒退到「成树」，不是「生长期」----------
+        //
+        // 需求：「采茶之后树只是退回到成年状态重新倒计时，不是退回到生长期。」
+        {
+            BlockPos pickPos = pos.offset(15, 0, 0);
+            level.setBlock(pickPos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(pickPos, TeaItems.TEA_BUSH.defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_RIPE), 3);
+
+            var pickPlayer = newPlayer(level, "teacraft_pick_test", pickPos);
+            level.getBlockState(pickPos).useWithoutItem(
+                    level, pickPlayer, new net.minecraft.world.phys.BlockHitResult(
+                            net.minecraft.world.phys.Vec3.atCenterOf(pickPos),
+                            net.minecraft.core.Direction.UP, pickPos, false));
+
+            check("pick_back_to_tree_not_growing",
+                    level.getBlockState(pickPos).getValue(TeaBushBlock.AGE) == TeaBushBlock.AGE_TREE,
+                    "采完应退回成树(age 2)，实得 " + level.getBlockState(pickPos).getValue(TeaBushBlock.AGE));
+
+            var pickBe = TeaBushBlock.bushEntityAt(level, pickPos);
+            check("pick_restarts_countdown", pickBe != null && pickBe.isGrowing(),
+                    "采完应重新开始倒计时");
+
+            level.setBlock(pickPos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
+        // ---------- 剪刀分枝 ----------
+        //
+        // 需求：「成熟可采茶的成熟茶树，不采茶直接用剪刀分枝，
+        //        剪刀右键 1 下，得到 2 个新茶树苗，老苗退回幼苗。」
+        {
+            BlockPos cutPos = pos.offset(18, 0, 0);
+            level.setBlock(cutPos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(cutPos, TeaItems.TEA_BUSH.defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_RIPE), 3);
+
+            var cutPlayer = newPlayer(level, "teacraft_cut_test", cutPos);
+            ItemStack shears = new ItemStack(net.minecraft.world.item.Items.SHEARS);
+            var playerInv = cutPlayer.getInventory();
+            playerInv.clearContent();
+            playerInv.setItem(0, shears);
+
+            int before = countBushInInventory(playerInv);
+            var cutHit = new net.minecraft.world.phys.BlockHitResult(
+                    net.minecraft.world.phys.Vec3.atCenterOf(cutPos),
+                    net.minecraft.core.Direction.UP, cutPos, false);
+
+            level.getBlockState(cutPos).useItemOn(shears, level, cutPlayer,
+                    net.minecraft.world.InteractionHand.MAIN_HAND, cutHit);
+
+            int gained = countBushInInventory(playerInv) - before;
+            // 期望值必须写死 2，不能引用 BRANCH_SEEDLINGS ——
+            // 否则改常量时断言跟着变，等于自己和自己比，永远绿。
+            // （做破坏性验证时踩到了：把常量改成 1，断言也变成期望 1，照样 PASS。）
+            check("branch_gives_two_seedlings",
+                    gained == 2,
+                    "剪刀分枝应给 2 个茶树种，实得 " + gained);
+
+            check("branch_resets_to_young",
+                    level.getBlockState(cutPos).getValue(TeaBushBlock.AGE) == TeaBushBlock.AGE_YOUNG,
+                    "分枝后老苗应退回幼苗(age 0)，实得 "
+                            + level.getBlockState(cutPos).getValue(TeaBushBlock.AGE));
+
+            check("branch_damages_shears",
+                    shears.getDamageValue() == 1,
+                    "剪刀应掉 1 点耐久，实得 " + shears.getDamageValue());
+
+            // 未成熟时剪刀不该有产出、也不该掉耐久
+            level.setBlock(cutPos, TeaItems.TEA_BUSH.defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_YOUNG), 3);
+            ItemStack shears2 = new ItemStack(net.minecraft.world.item.Items.SHEARS);
+            int before2 = countBushInInventory(playerInv);
+            level.getBlockState(cutPos).useItemOn(shears2, level, cutPlayer,
+                    net.minecraft.world.InteractionHand.MAIN_HAND, cutHit);
+            check("branch_rejected_when_young",
+                    countBushInInventory(playerInv) == before2 && shears2.getDamageValue() == 0,
+                    "未成熟茶树不能分枝，且不该消耗剪刀耐久");
+
+            level.setBlock(cutPos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
+        // ---------- 倒计时格式化精确到秒 ----------
+        //
+        // 需求：「倒计时精确到秒。」
+        // 24000 tick = 1 游戏日 = 20 分钟现实 = 1200 秒，即 20 tick = 1 秒。
+        {
+            String s20 = com.heishandashu.teacraft.core.TeaDurations.format(20L);      // 1 秒
+            String s1200 = com.heishandashu.teacraft.core.TeaDurations.format(1200L);  // 1 分钟
+            String s7200 = com.heishandashu.teacraft.core.TeaDurations.format(7200L);  // 6 分钟
+            String s0 = com.heishandashu.teacraft.core.TeaDurations.format(0L);
+
+            // 断言不能写死中文单位 —— 单位来自语言文件，
+            // 而自检跑在服务端，听到的是服务端当前语言（可能是 en_us 的 "s"/"m"）。
+            // 所以只验证「数字对不对」+「不是空」。
+            check("countdown_shows_seconds",
+                    s20.startsWith("1") && !s20.equals(s0),
+                    "20 tick = 1 秒，数字应为 1，实得 [" + s20 + "]");
+            check("countdown_shows_minutes",
+                    s1200.startsWith("1"),
+                    "1200 tick = 1 分钟，数字应为 1，实得 [" + s1200 + "]");
+            check("countdown_shows_six_minutes",
+                    s7200.startsWith("6"),
+                    "7200 tick = 6 分钟，数字应为 6，实得 [" + s7200 + "]");
+            check("countdown_zero_safe",
+                    s0 != null && !s0.isEmpty(),
+                    "0 tick 也要有输出，实得 [" + s0 + "]");
+        }
 
         // 沙子上不能种
         level.setBlock(pos.below(), Blocks.SAND.defaultBlockState(), 3);
@@ -2912,6 +3094,32 @@ public final class TeaSelfCheck {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** 造一个测试用玩家，站在指定位置。 */
+    private static net.minecraft.world.entity.player.Player newPlayer(
+            net.minecraft.world.level.Level level, String name, BlockPos at) {
+        var p = new net.minecraft.world.entity.player.Player(level,
+                new com.mojang.authlib.GameProfile(
+                        java.util.UUID.nameUUIDFromBytes(name.getBytes()), name)) {
+            @Override
+            public net.minecraft.world.level.GameType gameMode() {
+                return net.minecraft.world.level.GameType.SURVIVAL;
+            }
+        };
+        p.setPos(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        p.getInventory().clearContent();
+        return p;
+    }
+
+    /** 数玩家背包里有几个茶树苗。 */
+    private static int countBushInInventory(net.minecraft.world.entity.player.Inventory inv) {
+        int n = 0;
+        for (int i = 0; i < inv.getContainerSize(); i++) {
+            ItemStack s = inv.getItem(i);
+            if (s.is(TeaItems.TEA_BUSH_ITEM)) n += s.getCount();
+        }
+        return n;
     }
 
     /** 数某个位置附近掉了几个茶树苗。 */

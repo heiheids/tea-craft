@@ -13,34 +13,50 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 /**
- * 茶树方块实体：只负责记录「成熟还剩多少 tick」。
+ * 茶树方块实体：记录「成熟进度」。
  *
  * <h2>为什么茶树需要 BlockEntity</h2>
  * <p>原先成熟完全靠计划刻（{@code level.scheduleTick}），到期直接 {@code ripen()}。
- * 但计划刻<b>没法反查</b>「这个坐标还有多少 tick 到期」—— 原版队列存在
- * {@code LevelChunkTicks} 里，没有对外查询接口，也没写进 BlockState。</p>
+ * 但计划刻<b>没法反查</b>「这个坐标还有多少 tick 到期」。需求要显示倒计时，
+ * 所以必须有个地方存进度。</p>
  *
- * <p>需求要「显示成熟倒计时」并且「太冷暂停、取暖恢复」，就必须有一个
- * 可读可写的<b>剩余时间</b>，所以改成由方块实体持有状态。</p>
+ * <h2>⚠ 为什么用时间戳而不是「每 tick 减 1」</h2>
+ * <p>第一版写成「每 20 tick 调一次，每次 {@code remainingTicks--}」。
+ * 这是个<b>速率错误</b>：</p>
+ * <pre>
+ *   实际经过 144000 tick（6 游戏日）
+ *   但代码只被调用 144000 / 20 = 7200 次
+ *   每次减 1 ⇒ 只推进了 7200 tick
+ *   而 3 天成熟需要 72000 tick ⇒ 只走了 10%
+ * </pre>
+ * <p>表现就是：{@code /tick sprint 6D} 之后茶树依然不成熟。速率整整慢了 20 倍。</p>
+ *
+ * <p>正确做法是<b>记录已累积的游戏刻</b>，用 {@code gameTime} 的差值推进。
+ * 这样无论每秒 tick 多少、是否 sprint，进度都严格等于「经过的游戏刻」，
+ * 与游戏刻完全同步（也就能被 {@code /tick sprint}、{@code /tick rate} 加速）。</p>
  *
  * <h2>暂停 / 恢复的语义</h2>
- * <p>太冷时 {@code remainingTicks} <b>不再减少</b>，而不是清零。
- * 重新放上篝火后从原值继续倒数 —— 这就是「取暖后恢复生长」。</p>
- *
- * <h2>同步</h2>
- * <p>照搬 {@link TeaTrayBlockEntity} 的做法：三个值都进 {@link #getUpdateTag}
- * 和存盘方法，客户端 {@code level.getBlockEntity(pos)} 就能读到。</p>
+ * <p>太冷时把当前 {@code gameTime} 记进 {@link #pauseAnchor}，收住已累积的量；
+ * 取暖后重新取锚点，从那一刻继续累加 —— 暂停期间游戏刻照走，但不计入进度。</p>
  */
 public class TeaBushBlockEntity extends BlockEntity {
 
     /** 由 TeaItems 在注册后回填（与 TeaTrayBlockEntity.TYPE 同一约定）。 */
     public static net.minecraft.world.level.block.entity.BlockEntityType<TeaBushBlockEntity> TYPE;
 
-    /** 还差多少 tick 成熟。0 表示已经成熟（或还没开始计时）。 */
-    private int remainingTicks;
-
-    /** 这一轮成熟总共需要多少 tick。用于算进度百分比。 */
+    /** 这一轮成熟总共需要多少游戏刻。 */
     private int totalTicks;
+
+    /** 已经累积了多少游戏刻（不含当前这一段）。 */
+    private int elapsedTicks;
+
+    /**
+     * 上一段的起点（gameTime）。
+     *
+     * <p>暂停时把「到现在为止」的量算进 {@link #elapsedTicks}，
+     * 然后把这里置为 -1 表示「不在计时」。</p>
+     */
+    private long anchor = -1L;
 
     /** 是否因太冷而暂停。 */
     private boolean paused;
@@ -51,10 +67,6 @@ public class TeaBushBlockEntity extends BlockEntity {
 
     /* ---------------- 读写状态 ---------------- */
 
-    public int remainingTicks() {
-        return remainingTicks;
-    }
-
     public int totalTicks() {
         return totalTicks;
     }
@@ -63,40 +75,81 @@ public class TeaBushBlockEntity extends BlockEntity {
         return paused;
     }
 
-    /** 有没有在计时（totalTicks > 0 且还没成熟）。 */
+    /** 有没有在计时（有总时长，且还没成熟）。 */
     public boolean isGrowing() {
-        return totalTicks > 0 && remainingTicks > 0;
+        return totalTicks > 0 && remainingTicks(0) > 0;
     }
 
-    /** 设置一轮新的成熟计时（刚种下、或采摘后重新起算）。 */
-    public void startGrowing(int totalTicks) {
+    /**
+     * 还差多少游戏刻成熟。
+     *
+     * @param now 当前 gameTime；传 0 表示「不算正在走的这一段」
+     */
+    public int remainingTicks(long now) {
+        int done = elapsedTicks;
+        if (anchor >= 0L && now > 0L) {
+            done += (int) Math.max(0L, now - anchor);
+        }
+        return Math.max(0, totalTicks - done);
+    }
+
+    /** HUD 用：不带当前段的剩余量。 */
+    public int remainingTicks() {
+        return remainingTicks(0L);
+    }
+
+    /** 进度 0~1；没开始计时返回 -1。 */
+    public float progress(long now) {
+        if (totalTicks <= 0) return -1f;
+        int remain = remainingTicks(now);
+        if (remain <= 0) return 1f;
+        float p = 1f - (remain / (float) totalTicks);
+        return p < 0f ? 0f : (p > 1f ? 1f : p);
+    }
+
+    public float progress() {
+        return progress(0L);
+    }
+
+    /** 设置一轮新的计时（刚种下、或采摘后重新起算）。 */
+    public void startGrowing(int totalTicks, long now) {
         this.totalTicks = Math.max(1, totalTicks);
-        this.remainingTicks = this.totalTicks;
+        this.elapsedTicks = 0;
+        this.anchor = now;
         this.paused = false;
         setChanged();
         syncToClient();
     }
 
     /**
-     * 每 tick 推进一次倒计时。
+     * 按当前 gameTime 结算一次：推进进度、处理暂停/恢复。
      *
      * @param coldNow 当前位置是否「太冷」（需要篝火但没有）
-     * @return true 表示这一 tick 刚好到点成熟
+     * @param now     当前 gameTime
+     * @return true 表示到这一刻已经成熟
      */
-    public boolean tickCountdown(boolean coldNow) {
-        // 已成熟：不再倒数
-        if (remainingTicks <= 0) {
+    public boolean advanceTo(long now, boolean coldNow) {
+        if (totalTicks <= 0) return false;
+
+        // 已经成熟：只需要维护暂停标记
+        if (remainingTicks(now) <= 0) {
             if (paused != coldNow) {
                 paused = coldNow;
                 setChanged();
                 syncToClient();
             }
-            return false;
+            return true;
         }
 
-        // 太冷 → 暂停，remainingTicks 保持不变（「取暖后恢复」的关键）
         if (coldNow) {
-            if (!paused) {
+            // 暂停：把本段已走的量收进 elapsedTicks，然后停表
+            if (anchor >= 0L) {
+                elapsedTicks += (int) Math.max(0L, now - anchor);
+                anchor = -1L;
+                paused = true;
+                setChanged();
+                syncToClient();
+            } else if (!paused) {
                 paused = true;
                 setChanged();
                 syncToClient();
@@ -104,28 +157,20 @@ public class TeaBushBlockEntity extends BlockEntity {
             return false;
         }
 
-        // 恢复取暖 → 继续倒数
-        if (paused) {
+        // 不冷：如果之前在暂停，从此刻重新起表
+        if (anchor < 0L) {
+            anchor = now;
             paused = false;
             setChanged();
             syncToClient();
         }
 
-        remainingTicks--;
-        // 每秒同步一次就够 HUD 用，不必每 tick 发包
-        if (remainingTicks % 20 == 0 || remainingTicks <= 0) {
+        // 进度有变化就同步（每秒一次足够 HUD 用）
+        if (now % 20L == 0L) {
             setChanged();
             syncToClient();
         }
-        return remainingTicks <= 0;
-    }
-
-    /** 进度 0~1；没开始计时返回 -1。 */
-    public float progress() {
-        if (totalTicks <= 0) return -1f;
-        if (remainingTicks <= 0) return 1f;
-        float p = 1f - (remainingTicks / (float) totalTicks);
-        return p < 0f ? 0f : (p > 1f ? 1f : p);
+        return remainingTicks(now) <= 0;
     }
 
     public void syncToClient() {
@@ -136,21 +181,39 @@ public class TeaBushBlockEntity extends BlockEntity {
         }
     }
 
+    /**
+     * 仅供自检：把计时锚点往前拨，模拟「已经过了 ticks 刻」。
+     *
+     * <p>自检里世界时间不会自己走，而 {@code tick()} 内部读的是
+     * {@code level.getGameTime()}。为了验证「真实 tick 路径能成熟」，
+     * 只能把 anchor 往前拨，等价于时间已经流逝。</p>
+     *
+     * <p>生产代码不要调这个。</p>
+     */
+    public void debugWindBack(long ticks) {
+        if (anchor >= 0L) {
+            anchor -= Math.max(0L, ticks);
+        }
+        setChanged();
+    }
+
     /* ---------------- 存盘 / 同步 ---------------- */
 
     @Override
     protected void saveAdditional(ValueOutput out) {
         super.saveAdditional(out);
-        out.putInt("remaining", remainingTicks);
         out.putInt("total", totalTicks);
+        out.putInt("elapsed", elapsedTicks);
+        out.putLong("anchor", anchor);
         out.putBoolean("paused", paused);
     }
 
     @Override
     protected void loadAdditional(ValueInput in) {
         super.loadAdditional(in);
-        this.remainingTicks = in.getIntOr("remaining", 0);
         this.totalTicks = in.getIntOr("total", 0);
+        this.elapsedTicks = in.getIntOr("elapsed", 0);
+        this.anchor = in.getLongOr("anchor", -1L);
         this.paused = in.getBooleanOr("paused", false);
     }
 
@@ -158,8 +221,9 @@ public class TeaBushBlockEntity extends BlockEntity {
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = new CompoundTag();
-        tag.putInt("remaining", remainingTicks);
         tag.putInt("total", totalTicks);
+        tag.putInt("elapsed", elapsedTicks);
+        tag.putLong("anchor", anchor);
         tag.putBoolean("paused", paused);
         return tag;
     }

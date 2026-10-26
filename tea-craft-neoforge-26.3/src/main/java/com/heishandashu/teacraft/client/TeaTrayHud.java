@@ -172,11 +172,13 @@ public final class TeaTrayHud {
             progress = -1f;
         } else {
             var be = TeaBushBlock.bushEntityAt(mc.level, pos);
-            long remain = be == null ? -1 : be.remainingTicks();
-            float prog = be == null ? -1f : be.progress();
+            // 客户端也要带上当前 gameTime，倒计时数字才会自己走动
+            long now = mc.level.getGameTime();
+            long remain = be == null ? -1 : be.remainingTicks(now);
+            float prog = be == null ? -1f : be.progress(now);
 
             line1 = remain > 0
-                    ? Component.translatable("teacraft.hud.bush_countdown", formatDuration(remain))
+                    ? Component.translatable("teacraft.hud.bush_countdown", com.heishandashu.teacraft.core.TeaDurations.format(remain))
                     : Component.translatable("teacraft.hud.bush_growing_stage",
                     Component.translatable("teacraft.bush_age." + age));
             line2 = cold
@@ -228,7 +230,7 @@ public final class TeaTrayHud {
         int guiW = g.guiWidth();
         int guiH = g.guiHeight();
         int x = (guiW - panelW) / 2;
-        int y = guiH - 132;
+        int y = guiH - 102;   // 原为 guiH - 132，按要求下移 30
 
         g.fill(x, y, x + panelW, y + panelH, BG);
         g.fill(x, y, x + panelW, y + 1, BORDER);

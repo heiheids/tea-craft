@@ -375,14 +375,25 @@ public final class TeaSelfCheck {
                     "茶树必须有方块实体（倒计时要存在它里面）");
 
             if (be != null) {
-                be.startGrowing(2);
-                check("bush_countdown_started", be.isGrowing() && be.remainingTicks() == 2,
-                        "倒计时应从 2 开始，实得 " + be.remainingTicks());
+                long t0 = level.getGameTime();
+                be.startGrowing(2, t0);
+                check("bush_countdown_started", be.isGrowing() && be.remainingTicks(t0) == 2,
+                        "倒计时应从 2 开始，实得 " + be.remainingTicks(t0));
 
                 if (TeaBushBlock.isTooCold(level, maturePos)) {
                     level.setBlock(maturePos.offset(1, 0, 0),
                             Blocks.CAMPFIRE.defaultBlockState(), 3);
                 }
+
+                // 时间推进 2 tick 后应正好成熟
+                be.advanceTo(t0 + 2, false);
+                check("bush_matures_by_game_time",
+                        be.remainingTicks(t0 + 2) == 0,
+                        "经过 2 游戏刻后应到点，实得 " + be.remainingTicks(t0 + 2));
+
+                // 再走真实 tick 路径。tick() 内部读 level.getGameTime()，
+                // 自检里时间不走，所以把 anchor 往前拨。
+                be.debugWindBack(100L);
 
                 int guard = 0;
                 while (level.getBlockState(maturePos).getValue(TeaBushBlock.AGE) != TeaBushBlock.AGE_RIPE
@@ -399,10 +410,43 @@ public final class TeaSelfCheck {
             level.setBlock(maturePos, Blocks.AIR.defaultBlockState(), 3);
         }
 
+        // ---------- 倒计时速率必须等于「经过的游戏刻」----------
+        //
+        // 【这条防的是「/tick sprint 推不动茶树」】
+        // 第一版写成「每 20 tick 调一次 tickCountdown，每次 remainingTicks--」。
+        // 于是实际经过 144000 tick（6 游戏日）只推进 7200 —— 慢 20 倍，
+        // 表现就是 sprint 了 6 天茶树依然不成熟。
+        {
+            BlockPos ratePos = pos.offset(12, 0, 0);
+            level.setBlock(ratePos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(ratePos, TeaItems.TEA_BUSH.get().defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_TREE), 3);
+
+            var be = TeaBushBlock.bushEntityAt(level, ratePos);
+            if (be != null) {
+                long t0 = level.getGameTime();
+                be.startGrowing(100000, t0);
+
+                long t1 = t0 + 144000L;
+                be.advanceTo(t1, false);
+                check("bush_rate_equals_game_ticks",
+                        be.remainingTicks(t1) == 0,
+                        "6 游戏日（144000 刻）必须足够走完 100000 刻的成熟期，"
+                                + "实得剩余 " + be.remainingTicks(t1));
+
+                be.startGrowing(50000, t0);
+                be.advanceTo(t0 + 1000L, false);
+                check("bush_rate_linear",
+                        be.remainingTicks(t0 + 1000L) == 49000,
+                        "走 1000 刻后剩余应为 49000，实得 " + be.remainingTicks(t0 + 1000L));
+            }
+            level.setBlock(ratePos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
         // ---------- 太冷暂停 / 取暖恢复 ----------
         //
         // 需求：「太冷暂停生长，有取暖后恢复生长。」
-        // 关键语义是 remainingTicks 不清零，只是不再减少。
+        // 关键语义是：暂停期间游戏刻照走，但不计入进度；恢复后继续累加。
         {
             BlockPos pausePos = pos.offset(6, 0, 0);
             level.setBlock(pausePos.below(), Blocks.DIRT.defaultBlockState(), 3);
@@ -411,16 +455,29 @@ public final class TeaSelfCheck {
 
             var be = TeaBushBlock.bushEntityAt(level, pausePos);
             if (be != null) {
-                be.startGrowing(1000);
+                long t0 = level.getGameTime();
+                be.startGrowing(1000, t0);
 
-                be.tickCountdown(true);        // 太冷
-                check("bush_pause_freezes_countdown", be.remainingTicks() == 1000,
-                        "太冷时倒计时必须停住，实得 " + be.remainingTicks());
+                be.advanceTo(t0 + 100L, false);
+                check("bush_progress_before_pause",
+                        be.remainingTicks(t0 + 100L) == 900,
+                        "走 100 刻后剩余应为 900，实得 " + be.remainingTicks(t0 + 100L));
+
+                be.advanceTo(t0 + 100L, true);
                 check("bush_pause_flag_set", be.isPaused(), "暂停标记应为 true");
 
-                be.tickCountdown(false);       // 取暖恢复
-                check("bush_resume_continues", be.remainingTicks() == 999,
-                        "恢复后应从原值继续倒数，实得 " + be.remainingTicks());
+                be.advanceTo(t0 + 600L, true);
+                check("bush_pause_freezes_countdown",
+                        be.remainingTicks(t0 + 600L) == 900,
+                        "太冷期间倒计时必须停住（再走 500 刻仍应是 900），实得 "
+                                + be.remainingTicks(t0 + 600L));
+
+                be.advanceTo(t0 + 600L, false);
+                be.advanceTo(t0 + 700L, false);
+                check("bush_resume_continues",
+                        be.remainingTicks(t0 + 700L) == 800,
+                        "恢复后应从暂停处继续（再走 100 刻剩 800），实得 "
+                                + be.remainingTicks(t0 + 700L));
                 check("bush_pause_flag_cleared", !be.isPaused(), "恢复后暂停标记应清除");
             }
             level.setBlock(pausePos, Blocks.AIR.defaultBlockState(), 3);

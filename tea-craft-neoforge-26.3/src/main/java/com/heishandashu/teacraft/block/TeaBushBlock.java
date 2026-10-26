@@ -73,6 +73,9 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
     /** 成树且长够时间，可以采摘。 */
     public static final int AGE_RIPE = 3;
 
+    /** 剪刀分枝能得到几个新茶树种。 */
+    public static final int BRANCH_SEEDLINGS = 2;
+
     private static final VoxelShape SHAPE = Block.box(2.0, 0.0, 2.0, 14.0, 16.0, 14.0);
 
     public TeaBushBlock(Properties properties) {
@@ -237,14 +240,16 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
         }
 
         boolean cold = isTooCold(level, pos);
-        boolean justRipened = be.tickCountdown(cold);
+        // 按 gameTime 结算，而不是「每 20 tick 减 1」——
+        // 后者速率慢 20 倍，/tick sprint 也推不动（详见 TeaBushBlockEntity 的注释）
+        boolean justRipened = be.advanceTo(level.getGameTime(), cold);
 
         if (justRipened) {
             ripen(level, pos, state);
             return;   // 成熟后不再排计划刻
         }
 
-        // 每 20 tick（1 秒）推进一次倒计时；暂停时也继续排，才能感知「篝火回来了」
+        // 每 20 tick（1 秒）结算一次；暂停时也继续排，才能感知「篝火回来了」
         level.scheduleTick(pos, this, 20);
     }
 
@@ -276,7 +281,8 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
         int totalInt = (int) Math.min(Integer.MAX_VALUE, Math.max(1L, total));
         TeaBushBlockEntity be = bushEntityAt(level, pos);
         if (be != null) {
-            be.startGrowing(totalInt);
+            // 从当前 gameTime 起算
+            be.startGrowing(totalInt, level.getGameTime());
         }
         // 20 tick 后开始驱动倒计时
         level.scheduleTick(pos, state.getBlock(), 20);
@@ -313,6 +319,71 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
         growOneStage(level, pos, state, AGE_TREE);
     }
 
+    /* ------------------------------------------------------------------
+     * 剪刀分枝
+     * ------------------------------------------------------------------ */
+
+    /**
+     * 手持剪刀右键成熟茶树 → 分枝，得到 2 个新茶树种，老苗退回幼苗。
+     *
+     * <h2>需求</h2>
+     * <p>「成熟可采茶的成熟茶树，如果不采茶直接用剪刀对茶树进行分枝，
+     * 剪刀右键 1 下，得到 2 个新茶树苗，老苗退回到幼苗状态。」</p>
+     *
+     * <h2>为什么单独一个方法而不是塞进 useWithoutItem</h2>
+     * <p>原版的分发顺序是：先 {@code useItemOn}（手上有东西），
+     * 拿不到结果才落到 {@code useWithoutItem}（空手）。
+     * 剪刀在手上时走的是这条，所以必须覆写它，
+     * 否则剪刀会被当成普通右键（采摘）。</p>
+     *
+     * <h2>只在「可采」时生效</h2>
+     * <p>age != AGE_RIPE 时返回 PASS，让剪刀保持原版行为。
+     * 这条很关键：否则玩家拿剪刀点幼体茶树会莫名其妙消耗耐久。</p>
+     */
+    @Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, net.minecraft.world.InteractionHand hand,
+                                          BlockHitResult hit) {
+        if (!stack.is(net.minecraft.world.item.Items.SHEARS)) {
+            return InteractionResult.PASS;
+        }
+        if (state.getValue(AGE) != AGE_RIPE) {
+            if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                sp.sendSystemMessage(
+                        net.minecraft.network.chat.Component.translatable("teacraft.msg.branch_not_ripe"), true);
+            }
+            return InteractionResult.PASS;
+        }
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+
+        for (int i = 0; i < BRANCH_SEEDLINGS; i++) {
+            ItemStack seedling = new ItemStack(TeaItems.TEA_BUSH_ITEM.get());
+            if (!player.addItem(seedling)) {
+                popResource(level, pos, seedling);
+            }
+        }
+
+        stack.hurtAndBreak(1, player, hand == net.minecraft.world.InteractionHand.MAIN_HAND
+                ? net.minecraft.world.entity.EquipmentSlot.MAINHAND
+                : net.minecraft.world.entity.EquipmentSlot.OFFHAND);
+
+        level.playSound(null, pos, SoundEvents.SHEARS_SNIP, SoundSource.BLOCKS,
+                1.0F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+
+        if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            sp.sendSystemMessage(
+                    net.minecraft.network.chat.Component.translatable("teacraft.msg.branched", BRANCH_SEEDLINGS), true);
+        }
+
+        // 老苗退回幼苗，重新计时
+        level.setBlock(pos, state.setValue(AGE, AGE_YOUNG), 3);
+        if (level instanceof ServerLevel serverLevel) {
+            startCountdown(serverLevel, pos, level.getBlockState(pos));
+        }
+        return InteractionResult.SUCCESS;
+    }
     /* ------------------------------------------------------------------
      * 右键采摘
      * ------------------------------------------------------------------ */
@@ -352,8 +423,8 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
         level.playSound(null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS,
                 1.0F, 0.8F + random.nextFloat() * 0.4F);
 
-        // 采完回到生长期，重新长一轮（重新起算时间）
-        level.setBlock(pos, state.setValue(AGE, AGE_GROWING), 3);
+        // 采完退回到「成树」（age 2），不是生长期。
+        level.setBlock(pos, state.setValue(AGE, AGE_TREE), 3);
         if (level instanceof ServerLevel serverLevel) {
             startCountdown(serverLevel, pos, level.getBlockState(pos));
         }
