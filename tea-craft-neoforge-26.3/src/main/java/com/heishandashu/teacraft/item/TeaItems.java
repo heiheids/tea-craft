@@ -2,6 +2,7 @@ package com.heishandashu.teacraft.item;
 
 import com.heishandashu.teacraft.TeaCraft;
 import com.heishandashu.teacraft.block.TeaBushBlock;
+import com.heishandashu.teacraft.block.TeaBushBlockEntity;
 import com.heishandashu.teacraft.block.TeaCharcoalStoveBlock;
 import com.heishandashu.teacraft.block.TeaCharcoalStoveBlockEntity;
 import com.heishandashu.teacraft.block.TeaRollingTrayBlock;
@@ -353,6 +354,12 @@ public final class TeaItems {
                     TeaCharcoalStoveBlockEntity::new,
                     java.util.Set.of(TEA_CHARCOAL_STOVE.get())));
 
+    /** 茶树方块实体类型：承载成熟倒计时，支持太冷暂停 / 取暖恢复。 */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TeaBushBlockEntity>>
+            BUSH_BE_TYPE = BLOCK_ENTITIES.register("tea_bush", () -> new BlockEntityType<>(
+                    TeaBushBlockEntity::new,
+                    java.util.Set.of(TEA_BUSH.get())));
+
     /** 炒茶锅的方块实体类型。 */
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TeaWokBlockEntity>> WOK_BE_TYPE =
             BLOCK_ENTITIES.register("tea_wok", () -> new BlockEntityType<>(
@@ -627,6 +634,7 @@ public final class TeaItems {
         com.heishandashu.teacraft.block.PotterWheelBlockEntity.TYPE = POTTER_WHEEL_BE_TYPE.get();
         com.heishandashu.teacraft.block.TeaBoxBlockEntity.TYPE = BOX_BE_TYPE.get();
         com.heishandashu.teacraft.block.TeaSeatEntity.TYPE = SEAT_TYPE.get();
+        com.heishandashu.teacraft.block.TeaBushBlockEntity.TYPE = BUSH_BE_TYPE.get();
     }
 
     /**

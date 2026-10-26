@@ -59,7 +59,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * <p>于是「越热长得越快」和「概率仿小麦」是同一套机制。
  * 改 {@code randomTickSpeed} 会按比例改变所有植物的速度，和原版农作物一致。</p>
  */
-public class TeaBushBlock extends Block implements BonemealableBlock {
+public class TeaBushBlock extends Block implements BonemealableBlock,
+        net.minecraft.world.level.block.EntityBlock {
 
     public static final IntegerProperty AGE = BlockStateProperties.AGE_3;
 
@@ -127,7 +128,9 @@ public class TeaBushBlock extends Block implements BonemealableBlock {
         if (level.isClientSide()) return;
         // 只有「空 → 茶树」才算新种下；随机刻/骨粉改 age 也会走这里，不能重置计时
         if (oldState.is(this)) return;
-        scheduleRipen(level, pos);
+        if (level instanceof ServerLevel serverLevel) {
+            startCountdown(serverLevel, pos, state);
+        }
     }
 
     /** 篝火保温的搜索半径（格）。需求：「半径 2 格之内有篝火」。 */
@@ -225,11 +228,65 @@ public class TeaBushBlock extends Block implements BonemealableBlock {
             level.destroyBlock(pos, true);
             return;
         }
-        if (isTooCold(level, pos)) {   // 太冷不成熟，1 分钟后再看
-        ripen(level, pos, state);
-            level.scheduleTick(pos, this, 20 * 60);
+
+        TeaBushBlockEntity be = bushEntityAt(level, pos);
+        if (be == null) {
+            // 没有方块实体（旧存档 / 刚放置）：补一个计时再继续
+            startCountdown(level, pos, state);
             return;
         }
+
+        boolean cold = isTooCold(level, pos);
+        boolean justRipened = be.tickCountdown(cold);
+
+        if (justRipened) {
+            ripen(level, pos, state);
+            return;   // 成熟后不再排计划刻
+        }
+
+        // 每 20 tick（1 秒）推进一次倒计时；暂停时也继续排，才能感知「篝火回来了」
+        level.scheduleTick(pos, this, 20);
+    }
+
+    /** 取该坐标的茶树方块实体。 */
+    public static TeaBushBlockEntity bushEntityAt(net.minecraft.world.level.BlockGetter level,
+                                                  BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof TeaBushBlockEntity be ? be : null;
+    }
+
+    /**
+     * 供自检调用的一次「成熟推进」。
+     *
+     * <p>{@link #tick} 是 protected，自检包不在同一包里，所以开这个口子。
+     * 它<b>只是转发</b>，不改变任何语义 —— 这样自检跑的就是真实逻辑，
+     * 而不是像以前那样绕过 tick 直接调 {@code ripen()} 导致假绿。</p>
+     */
+    public void tickForSelfCheck(BlockState state, ServerLevel level, BlockPos pos) {
+        tick(state, level, pos, level.getRandom());
+    }
+
+    /**
+     * 开始（或重新开始）一轮成熟计时。
+     *
+     * <p>把「还差多少 tick」写进方块实体，同时排一个 20 tick 后的计划刻来驱动它。
+     * 这样倒计时既能在 HUD 上显示，也能在太冷时原地暂停。</p>
+     */
+    public static void startCountdown(ServerLevel level, BlockPos pos, BlockState state) {
+        long total = TeaClimate.growthTicks(level, pos);
+        int totalInt = (int) Math.min(Integer.MAX_VALUE, Math.max(1L, total));
+        TeaBushBlockEntity be = bushEntityAt(level, pos);
+        if (be != null) {
+            be.startGrowing(totalInt);
+        }
+        // 20 tick 后开始驱动倒计时
+        level.scheduleTick(pos, state.getBlock(), 20);
+    }
+
+    /** 方块实体：承载成熟倒计时。 */
+    @Override
+    public net.minecraft.world.level.block.entity.BlockEntity newBlockEntity(
+            BlockPos pos, BlockState state) {
+        return new TeaBushBlockEntity(pos, state);
     }
 
     /* ------------------------------------------------------------------
@@ -297,7 +354,9 @@ public class TeaBushBlock extends Block implements BonemealableBlock {
 
         // 采完回到生长期，重新长一轮（重新起算时间）
         level.setBlock(pos, state.setValue(AGE, AGE_GROWING), 3);
-        scheduleRipen(level, pos);
+        if (level instanceof ServerLevel serverLevel) {
+            startCountdown(serverLevel, pos, level.getBlockState(pos));
+        }
         return InteractionResult.SUCCESS;
     }
 }

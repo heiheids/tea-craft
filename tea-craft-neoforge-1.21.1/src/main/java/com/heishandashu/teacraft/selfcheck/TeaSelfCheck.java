@@ -344,6 +344,91 @@ public final class TeaSelfCheck {
         check("ripen_needs_time",
                 level.getBlockState(pos).getValue(TeaBushBlock.AGE) == TeaBushBlock.AGE_RIPE, "age=3");
 
+        // ---------- 成熟必须真的能发生（走 tick，不是直接调 ripen）----------
+        //
+        // 【这条防的是「茶树永远不成熟」】
+        // 老代码的 tick() 写反了：
+        //     if (isTooCold(pos)) { ripen(...); scheduleTick(...); return; }
+        //     // 温度正常时什么都不做
+        // 于是温度正常时永远不会成熟，而太冷时反而立刻成熟。
+        //
+        // 原来的 ripen_needs_time 直接调 block.ripen(...)，绕过了 tick()，
+        // 所以一直绿着 —— 用户实测「很久没成熟」才暴露。
+        //
+        // 下面把倒计时压到 2 tick，模拟一个温度正常（不冷）的茶树，
+        // 连续调真实 tick()，看它会不会自己走到 age 3。
+        {
+            BlockPos maturePos = pos.offset(3, 0, 0);
+            level.setBlock(maturePos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(maturePos, TeaItems.TEA_BUSH.get().defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_TREE), 3);
+
+            var be = TeaBushBlock.bushEntityAt(level, maturePos);
+            check("bush_has_block_entity", be != null,
+                    "茶树必须有方块实体（倒计时要存在它里面）");
+
+            if (be != null) {
+                // 压到 2 tick，避免自检要等几个游戏日
+                be.startGrowing(2);
+                check("bush_countdown_started", be.isGrowing() && be.remainingTicks() == 2,
+                        "倒计时应从 2 开始，实得 " + be.remainingTicks());
+
+                BlockState matureState = level.getBlockState(maturePos);
+                boolean cold = TeaBushBlock.isTooCold(level, maturePos);
+
+                // 如果这个群系恰好是寒带且没篝火，先放个篝火保证「不冷」
+                if (cold) {
+                    level.setBlock(maturePos.offset(1, 0, 0),
+                            Blocks.CAMPFIRE.defaultBlockState(), 3);
+                }
+
+                // 走真实 tick 路径。每次 tick 内部会自己再排一个 20 tick 的计划刻，
+                // 这里直接连续调，等价于时间流逝。
+                int guard = 0;
+                while (level.getBlockState(maturePos).getValue(TeaBushBlock.AGE) != TeaBushBlock.AGE_RIPE
+                        && guard++ < 10) {
+                    block.tickForSelfCheck(level.getBlockState(maturePos), level, maturePos);
+                }
+
+                check("bush_matures_via_tick",
+                        level.getBlockState(maturePos).getValue(TeaBushBlock.AGE) == TeaBushBlock.AGE_RIPE,
+                        "温度正常时，茶树必须能通过 tick() 自己成熟（这正是之前坏掉的地方）");
+
+                level.setBlock(maturePos, Blocks.AIR.defaultBlockState(), 3);
+                level.setBlock(maturePos.offset(1, 0, 0), Blocks.AIR.defaultBlockState(), 3);
+            }
+            level.setBlock(maturePos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
+        // ---------- 太冷暂停 / 取暖恢复 ----------
+        //
+        // 需求：「太冷暂停生长，有取暖后恢复生长。」
+        // 关键语义是 remainingTicks 不清零，只是不再减少。
+        {
+            BlockPos pausePos = pos.offset(6, 0, 0);
+            level.setBlock(pausePos.below(), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(pausePos, TeaItems.TEA_BUSH.get().defaultBlockState()
+                    .setValue(TeaBushBlock.AGE, TeaBushBlock.AGE_TREE), 3);
+
+            var be = TeaBushBlock.bushEntityAt(level, pausePos);
+            if (be != null) {
+                be.startGrowing(1000);
+
+                // 直接测 BlockEntity 的暂停语义（不依赖群系是不是寒带）
+                be.tickCountdown(true);        // 太冷
+                int afterPaused = be.remainingTicks();
+                check("bush_pause_freezes_countdown", afterPaused == 1000,
+                        "太冷时倒计时必须停住，实得 " + afterPaused);
+                check("bush_pause_flag_set", be.isPaused(), "暂停标记应为 true");
+
+                be.tickCountdown(false);       // 取暖恢复
+                check("bush_resume_continues", be.remainingTicks() == 999,
+                        "恢复后应从原值继续倒数，实得 " + be.remainingTicks());
+                check("bush_pause_flag_cleared", !be.isPaused(), "恢复后暂停标记应清除");
+            }
+            level.setBlock(pausePos, Blocks.AIR.defaultBlockState(), 3);
+        }
+
         int bound3 = TeaClimate.growthRollBound(3L * 24000L);
         int bound8 = TeaClimate.growthRollBound(8L * 24000L);
         check("roll_bound_wheat_like", bound3 == 26, "3 天 -> 1/" + bound3);

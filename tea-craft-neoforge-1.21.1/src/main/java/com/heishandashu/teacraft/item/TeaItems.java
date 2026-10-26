@@ -2,6 +2,7 @@ package com.heishandashu.teacraft.item;
 import com.heishandashu.teacraft.TeaCraft;
 import net.minecraft.world.entity.EntityType;
 import com.heishandashu.teacraft.block.TeaBushBlock;
+import com.heishandashu.teacraft.block.TeaBushBlockEntity;
 import com.heishandashu.teacraft.block.TeaCharcoalStoveBlock;
 import com.heishandashu.teacraft.block.TeaCharcoalStoveBlockEntity;
 import com.heishandashu.teacraft.block.TeaKettleBlock;
@@ -366,6 +367,11 @@ public final class TeaItems {
             STOVE_BE_TYPE = BLOCK_ENTITIES.register("tea_charcoal_stove", () -> BlockEntityType.Builder.of(
                     TeaCharcoalStoveBlockEntity::new, TEA_CHARCOAL_STOVE.get()).build(null));
 
+    /** 茶树方块实体类型：承载成熟倒计时，支持太冷暂停 / 取暖恢复。 */
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TeaBushBlockEntity>>
+            BUSH_BE_TYPE = BLOCK_ENTITIES.register("tea_bush", () -> BlockEntityType.Builder.of(
+                    TeaBushBlockEntity::new, TEA_BUSH.get()).build(null));
+
     /** 閾侀攨鐨勬柟鍧楀疄浣撶被鍨嬨€?*/
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TeaWokBlockEntity>> WOK_BE_TYPE =
             BLOCK_ENTITIES.register("tea_wok", () -> BlockEntityType.Builder.of(
@@ -591,6 +597,7 @@ public final class TeaItems {
                 POTTER_WHEEL_BE_TYPE.get();
         com.heishandashu.teacraft.block.TeaSeatEntity.TYPE = SEAT_TYPE.get();
         com.heishandashu.teacraft.block.TeaBoxBlockEntity.TYPE = BOX_BE_TYPE.get();
+        TeaBushBlockEntity.TYPE = BUSH_BE_TYPE.get();
 
         // 闄剁摲鍥炬牱琛細姝ゆ椂鑼舵澂 / 鐩栫 / 鐑ф按澹堕兘宸叉敞鍐岋紝鍙互瀹夊叏鍙栧€笺€?
         com.heishandashu.teacraft.core.CeramicPatterns.bootstrap();

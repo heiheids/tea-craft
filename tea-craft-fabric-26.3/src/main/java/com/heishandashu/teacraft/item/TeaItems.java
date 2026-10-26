@@ -381,6 +381,19 @@ public final class TeaItems {
                             java.util.Set.of(POTTER_WHEEL)));
 
     /**
+     * 茶树方块实体类型：承载成熟倒计时，支持太冷暂停 / 取暖恢复。
+     *
+     * <p>茶树原先没有方块实体，成熟靠计划刻。要显示倒计时、并且支持
+     * 「太冷暂停、取暖恢复」，就必须有个地方存「还差多少 tick」。</p>
+     */
+    public static final BlockEntityType<com.heishandashu.teacraft.block.TeaBushBlockEntity>
+            BUSH_BE_TYPE =
+            Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, TeaCraft.id("tea_bush"),
+                    new BlockEntityType<>(
+                            com.heishandashu.teacraft.block.TeaBushBlockEntity::new,
+                            java.util.Set.of(TEA_BUSH)));
+
+    /**
      * 椅子座位实体。
      *
      * <p>坐下必须靠「骑乘一个实体」实现，方块本身当不了载具。所以椅子有空手
@@ -423,6 +436,7 @@ public final class TeaItems {
         com.heishandashu.teacraft.block.ClayKilnBlockEntity.TYPE = CLAY_KILN_BE_TYPE;
         com.heishandashu.teacraft.block.PotterWheelBlockEntity.TYPE = POTTER_WHEEL_BE_TYPE;
         com.heishandashu.teacraft.block.TeaSeatEntity.TYPE = SEAT_TYPE;
+        com.heishandashu.teacraft.block.TeaBushBlockEntity.TYPE = BUSH_BE_TYPE;
     }
 
     /** 鍏ㄩ儴鐗╁搧锛堝垱閫犳爮椤哄簭 = 娉ㄥ唽椤哄簭锛夈€?*/

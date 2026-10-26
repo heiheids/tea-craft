@@ -135,14 +135,129 @@ public final class TeaTrayHud implements HudElement {
      * 和晒盘面板同一套机制：读 {@code mc.hitResult} 判断准星指向哪个方块。</p>
      */
     private void renderColdBushHint(GuiGraphicsExtractor g, Minecraft mc, BlockPos pos) {
-        if (TeaBushBlock.isTooCold(mc.level, pos)) {
-            Component msg = Component.translatable("teacraft.hud.bush_too_cold")
-                    .withStyle(net.minecraft.ChatFormatting.AQUA);
-            int w = mc.font.width(msg);
-            int x = (g.guiWidth() - w) / 2;
-            int y = g.guiHeight() / 2 + 18;
-            g.fill(x - 4, y - 3, x + w + 4, y + 10, 0x90000000);
-            g.text(mc.font, msg, x, y, 0xFFFFFFFF, true);
+        renderBushPanel(g, mc, pos);
+    }
+
+    /**
+     * 茶树面板：成熟倒计时 + 进度条 + 暂停提示。
+     *
+     * <p>需求：「增加茶树成熟倒计时显示。太冷暂停生长，有取暖后恢复生长。」</p>
+     *
+     * <h2>为什么能显示倒计时</h2>
+     * <p>茶树现在带 {@link com.heishandashu.teacraft.block.TeaBushBlockEntity}，
+     * 里面存 {@code remainingTicks}。客户端通过 {@code level.getBlockEntity(pos)}
+     * 直接读到它（值随 {@code getUpdateTag} 同步），不需要服务端每 tick 发包。</p>
+     *
+     * <h2>三种状态</h2>
+     * <ol>
+     *   <li><b>已成熟</b>（age 3）→ 「可以采茶了」；</li>
+     *   <li><b>暂停</b>（太冷缺篝火）→ 剩余时间 + 「太冷，生长暂停」；</li>
+     *   <li><b>生长中</b> → 剩余时间 + 进度条。</li>
+     * </ol>
+     */
+    private void renderBushPanel(GuiGraphicsExtractor g, Minecraft mc, BlockPos pos) {
+        BlockState state = mc.level.getBlockState(pos);
+        if (!state.is(TeaItems.TEA_BUSH)) return;
+
+        int age = state.getValue(TeaBushBlock.AGE);
+        boolean cold = TeaBushBlock.isTooCold(mc.level, pos);
+
+        Component line1;
+        Component line2;
+        float progress;
+
+        if (age >= TeaBushBlock.AGE_RIPE) {
+            line1 = Component.translatable("teacraft.hud.bush_ripe");
+            line2 = Component.translatable("teacraft.hud.bush_ripe_hint");
+            progress = 1f;
+        } else if (age < TeaBushBlock.AGE_TREE) {
+            line1 = Component.translatable("teacraft.hud.bush_growing_stage",
+                    Component.translatable("teacraft.bush_age." + age));
+            line2 = cold
+                    ? Component.translatable("teacraft.hud.bush_too_cold")
+                    : Component.translatable("teacraft.hud.bush_growing_hint");
+            progress = -1f;
+        } else {
+            var be = TeaBushBlock.bushEntityAt(mc.level, pos);
+            long remain = be == null ? -1 : be.remainingTicks();
+            float prog = be == null ? -1f : be.progress();
+
+            line1 = remain > 0
+                    ? Component.translatable("teacraft.hud.bush_countdown", formatDuration(remain))
+                    : Component.translatable("teacraft.hud.bush_growing_stage",
+                    Component.translatable("teacraft.bush_age." + age));
+            line2 = cold
+                    ? Component.translatable("teacraft.hud.bush_paused")
+                    : Component.translatable("teacraft.hud.bush_waiting");
+            progress = prog;
+        }
+
+        drawSimplePanel(g, mc, line1, line2, progress, cold ? 0xFF4FC3F7 : 0xFF7BC67B);
+    }
+
+    /**
+     * 把 tick 数变成「1 天 3 小时」这样的可读文本。
+     *
+     * <p>一个游戏日 = 24000 tick = 20 分钟现实时间 ⇒ 1200 tick = 1 分钟。</p>
+     */
+    static String formatDuration(long ticks) {
+        if (ticks <= 0) return "0";
+        long totalMinutes = ticks / 1200L;
+        long days = totalMinutes / 20L;
+        long hours = (totalMinutes % 20L) * 24L / 20L;
+        long minutes = totalMinutes % 20L % 60L;
+
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) {
+            sb.append(days).append(Component.translatable("teacraft.unit.day").getString());
+        }
+        if (hours > 0) {
+            sb.append(hours).append(Component.translatable("teacraft.unit.hour").getString());
+        }
+        if (days == 0 && hours == 0) {
+            sb.append(minutes).append(Component.translatable("teacraft.unit.minute").getString());
+        }
+        if (sb.length() == 0) {
+            sb.append(Component.translatable("teacraft.unit.less_than_minute").getString());
+        }
+        return sb.toString();
+    }
+
+    /** 两行文字 + 可选进度条的小面板（茶树用）。 */
+    private void drawSimplePanel(GuiGraphicsExtractor g, Minecraft mc,
+                                 Component line1, Component line2,
+                                 float progress, int barColor) {
+        Font font = mc.font;
+        int textW = Math.max(font.width(line1), font.width(line2));
+        int panelW = Math.max(130, Math.min(210, textW + PAD * 2));
+        int panelH = PAD * 2 + LINE * 2 + 5;
+
+        int guiW = g.guiWidth();
+        int guiH = g.guiHeight();
+        int x = (guiW - panelW) / 2;
+        int y = guiH - 132;
+
+        g.fill(x, y, x + panelW, y + panelH, BG);
+        g.fill(x, y, x + panelW, y + 1, BORDER);
+        g.fill(x, y + panelH - 1, x + panelW, y + panelH, BORDER);
+        g.fill(x, y, x + 1, y + panelH, BORDER);
+        g.fill(x + panelW - 1, y, x + panelW, y + panelH, BORDER);
+
+        int maxTextW = panelW - PAD * 2;
+        int row1 = y + PAD;
+        int row2 = row1 + LINE;
+
+        g.text(font, fit(font, line1, maxTextW), x + PAD, row1, TEXT, true);
+        g.text(font, fit(font, line2, maxTextW), x + PAD, row2, TEXT_DIM, true);
+
+        if (progress >= 0f) {
+            int barW = maxTextW;
+            int barY = row2 + LINE + 1;
+            g.fill(x + PAD, barY, x + PAD + barW, barY + 3, BAR_BG);
+            int fillW = (int) (barW * Math.max(0f, Math.min(1f, progress)));
+            if (fillW > 0) {
+                g.fill(x + PAD, barY, x + PAD + fillW, barY + 3, barColor);
+            }
         }
     }
     private void renderRollingTray(GuiGraphicsExtractor g, Minecraft mc, BlockPos pos, BlockState state) {
