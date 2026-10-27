@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "teacraft_rolling_tray",
+  "pattern": [
+    "PBP"
+  ],
+  "key": {
+    "B": { "item": "minecraft:bamboo_planks" },
+    "P": { "tag": "minecraft:planks" }
+  },
+  "result": {
+    "id": "teacraft:tea_rolling_tray",
+    "count": 1
+  }
+}

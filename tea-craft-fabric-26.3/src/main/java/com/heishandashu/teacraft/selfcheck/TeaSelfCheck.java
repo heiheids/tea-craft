@@ -1866,18 +1866,57 @@ public final class TeaSelfCheck {
         // 这里真的放一个盘、右键盘沿，检查方块被移除、物品到手、组件记下状态。
         checkTeaSetPickUp(server);
 
-        // ---- 茶盘合成表：左右各一个木台阶、中间竹子 ----
+        // ---- 工作方块合成表：逐个用 RecipeManager 真的查一遍 ----
         //
         // 只检查 json 文件存在是不够的：配方格式写错时文件照样在，
         // 游戏只会静默忽略，创造栏里能看到物品但合不出来。
         // 所以这里用 RecipeManager 真的查一遍。
-        checkCraftingRecipeFor(server, TeaItems.TEA_SET_ITEM,
-                new net.minecraft.world.item.ItemStack[]{
-                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_SLAB),
-                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BAMBOO),
-                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_SLAB),
-                },
-                "tea_set_recipe_matches");
+        //
+        // 【为什么补齐 5 条】原先只验了 tea_set 一条，
+        // 所以「晒盘/揉茶匾/碳焙筐/炒锅/茶盘」缺了哪个都发现不了。
+        // 实际就发生过：三支都没有前四个的配方文件，1.21.1 连茶盘也缺。
+        {
+            ItemStack planks = new ItemStack(net.minecraft.world.item.Items.OAK_PLANKS);
+            ItemStack bamboo = new ItemStack(net.minecraft.world.item.Items.BAMBOO);
+            ItemStack bambooPlanks = new ItemStack(net.minecraft.world.item.Items.BAMBOO_PLANKS);
+            ItemStack bambooSlab = new ItemStack(net.minecraft.world.item.Items.BAMBOO_SLAB);
+            ItemStack iron = new ItemStack(net.minecraft.world.item.Items.IRON_INGOT);
+
+            // 晒盘：P B P
+            checkCraftingRecipeFor(server, TeaItems.TEA_TRAY_ITEM,
+                    new ItemStack[]{planks, bamboo, planks},
+                    "recipe_tea_tray");
+
+            // 揉茶匾：P B P（中间是竹板）
+            checkCraftingRecipeFor(server, TeaItems.TEA_ROLLING_TRAY_ITEM,
+                    new ItemStack[]{planks, bambooPlanks, planks},
+                    "recipe_tea_rolling_tray");
+
+            // 碳焙筐：两行 P B P
+            checkCraftingRecipeFor(server, TeaItems.TEA_CHARCOAL_STOVE_ITEM,
+                    new ItemStack[]{planks, bamboo, planks,
+                            planks, bamboo, planks},
+                    "recipe_tea_charcoal_stove");
+
+            // 炒茶锅：V 形 5 铁锭 + 底部 3 木台阶
+            //
+            // 【为什么要加底部那行】原本只想用「5 个铁锭 U 形」，
+            // 但那与原版【矿车】配方完全一致：
+            //     minecart: "# #" / "###"   （5 个 iron_ingot）
+            // 形状一样时游戏只会匹配到矿车，炒茶锅永远合不出来。
+            // 所以底部再加一行木台阶，彻底区分开。
+            ItemStack slab = new ItemStack(net.minecraft.world.item.Items.OAK_SLAB);
+            checkCraftingRecipeFor(server, TeaItems.TEA_WOK_ITEM,
+                    new ItemStack[]{iron, ItemStack.EMPTY, iron,
+                            iron, iron, iron,
+                            slab, slab, slab},
+                    "recipe_tea_wok");
+
+            // 茶盘：P B P（中间是竹台阶）
+            checkCraftingRecipeFor(server, TeaItems.TEA_SET_ITEM,
+                    new ItemStack[]{planks, bambooSlab, planks},
+                    "recipe_tea_set");
+        }
 
         // ---- 茶盘朝向：点击坐标必须能按朝向正确换算 ----
         //
@@ -3339,7 +3378,7 @@ public final class TeaSelfCheck {
         boolean ok = false;
         String detail;
         if (found.isEmpty()) {
-            detail = "用「木台阶 + 竹子 + 木台阶」查不到任何配方";
+            detail = "查不到任何配方（材料或形状与 json 不符）";
         } else {
             // 26.3 的 Recipe 只有 assemble(input)，没有 getResultItem
             var result = found.get().value().assemble(input);
@@ -3348,26 +3387,11 @@ public final class TeaSelfCheck {
         }
         check(name, ok, detail);
 
-        // 形状断言：pattern 必须是 "#B#"，且 # 是木台阶标签、B 是竹子
-        JsonObject recipe = jsonAt("data/" + NS + "/recipe/tea_set.json");
-        if (recipe == null) {
-            check(name + "_json", false, "缺少 data/teacraft/recipe/tea_set.json");
-            return;
-        }
-        String pattern = recipe.has("pattern")
-                ? recipe.getAsJsonArray("pattern").get(0).getAsString() : "";
-        check(name + "_pattern", "#B#".equals(pattern),
-                "摆放形状应为 [#B#]（左右木台阶、中间竹子），实际 [" + pattern + "]");
-
-        String slabKey = recipe.getAsJsonObject("key").has("#")
-                ? recipe.getAsJsonObject("key").get("#").getAsString() : "";
-        check(name + "_slab_tag", "#minecraft:wooden_slabs".equals(slabKey),
-                "两侧应为任意木台阶，实际 " + slabKey);
-
-        String midKey = recipe.getAsJsonObject("key").has("B")
-                ? recipe.getAsJsonObject("key").get("B").getAsString() : "";
-        check(name + "_bamboo", "minecraft:bamboo".equals(midKey),
-                "中间应为竹子，实际 " + midKey);
+        // 【曾经这里还有三段硬编码的形状断言】check(name+"_pattern") 等，
+        // 写死了 tea_set 的旧配方 "#B#" / wooden_slabs / bamboo。
+        // 一旦配方改版，它们必然变红 —— 而它们其实只是「把 json 内容再抄一遍」，
+        // 没有额外价值：真正有意义的是上面 RecipeManager 的实查。
+        // 已删除，改为由 checkAllRecipesPresent() 统一验证「配方文件都在且能查出结果」。
     }
 
     /* ---------------- 茶盘拿起：整只搬走且保留内容 ---------------- */

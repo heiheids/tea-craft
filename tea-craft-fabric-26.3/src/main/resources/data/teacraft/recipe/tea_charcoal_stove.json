@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "teacraft_charcoal_stove",
+  "pattern": [
+    "PBP",
+    "PBP"
+  ],
+  "key": {
+    "B": "minecraft:bamboo",
+    "P": "#minecraft:planks"
+  },
+  "result": {
+    "id": "teacraft:tea_charcoal_stove",
+    "count": 1
+  }
+}

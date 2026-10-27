@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "group": "teacraft_wok",
+  "pattern": [
+    "I I",
+    "III",
+    "SSS"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "S": { "tag": "minecraft:wooden_slabs" }
+  },
+  "result": {
+    "id": "teacraft:tea_wok",
+    "count": 1
+  }
+}

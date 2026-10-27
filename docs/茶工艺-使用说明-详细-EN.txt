@@ -107,7 +107,9 @@ within a 2-block radius.
 Right-click a fully grown bush (age 3).
 
   1 to 3 fresh leaves per harvest (random).
-  The bush returns to age 2 and you can wait for the next flush.
+  The bush returns to the GROWN state (age 2), not to a seedling —
+  so it does not have to grow tall again; the next maturity countdown
+  starts immediately.
 
   Fresh leaves come in 5 item variants by origin:
     Tropical / Subtropical / Temperate / Boreal / Polar leaves
@@ -116,6 +118,51 @@ Right-click a fully grown bush (age 3).
   directly — put it in a gaiwan and add water" also appears for fresh
   leaves, because they belong to the same item family.
   Their only use is going into a drying tray to start processing.
+
+--------------------------------------------------------------------------------
+1.6 Maturity countdown (HUD)
+--------------------------------------------------------------------------------
+
+Look at a tea bush and a panel appears near the bottom of the screen:
+
+  Growing:      Tea Bush · 2d5h13m7s left        <- green progress bar
+  Grown, waiting: Tea Bush · 41s left
+  Paused (cold):  Tea Bush · 41s left
+                  Too cold, growth paused (place a campfire to resume)
+                                                 <- bar turns blue
+  Ripe:         Tea Bush · Ready to harvest
+                Right-click to pick · Shears to take cuttings
+
+  The countdown is accurate to the SECOND.
+  Units are real time: 1 second = 20 game ticks, 1 in-game day = 20 real minutes.
+  Example: a 3-day maturity (72000 ticks) shows as "1h".
+  The timer runs on game ticks, so game speed-ups (/tick sprint, /tick rate)
+  also speed up maturity.
+  When paused by cold, the countdown FREEZES (it does not reset to zero).
+  Put the campfire back and it continues from where it stopped.
+
+--------------------------------------------------------------------------------
+1.7 Taking cuttings with shears
+--------------------------------------------------------------------------------
+
+Right-click a RIPE bush (age 3) while holding SHEARS:
+
+  You get 2 new tea seeds
+  The old bush reverts to a seedling (age 0) and starts over
+  The shears lose 1 durability
+
+  This is how tea is propagated. Tea seeds cannot be crafted — you get them
+  from zombies or from cuttings.
+
+  Only RIPE bushes (age 3) can be cut. On an unripe bush you get
+  "This bush is not ripe yet — taking cuttings would harm it",
+  and the shears are NOT damaged.
+
+  Picking and cutting are different actions:
+    Empty hand  -> pick, 1~3 fresh leaves, bush returns to GROWN
+    Shears      -> cuttings, 2 tea seeds, bush returns to SEEDLING
+
+  Both reset the maturity timer, so pick whichever you need.
 
 
 ================================================================================
@@ -659,26 +706,35 @@ Part 4  Furniture and Teaware
 Appendix A  Recipe Reference
 ================================================================================
 
-  Item                 Recipe
-  -------------------  --------------------------------------------
+  Item                 Recipe (verified against the actual recipe json)
+  -------------------  ------------------------------------------------------------
   Tea seed             tea seed (or fresh leaves) + dirt  -> shapeless
   Tea Craft Guide      tea seed + book                   -> shapeless
-  Drying tray          3 wooden slabs + 3 planks
-  Rolling tray         3 wooden slabs + 2 wooden fences
-  Tea wok              iron block + wooden slab          -> see in-game
-  Charcoal stove       3 wooden slabs + 2 wooden fences
-  Clay kiln            8 bricks in a ring (crafting table)
-  Potter's wheel       3 wooden slabs + 2 wooden fences
-  Tea table            3 logs + 2 planks
-  Hot tea table        tea table + magma block           -> shapeless, irreversible
-  Tea chair            3 planks + 2 fences
-  Tea box              8 wooden slabs in a ring (hollow centre)
-  Tea tray             wooden slab + bamboo (#B# shape)
-  Teapot (decorative)  see in-game book
-  Kettle               see in-game book (must be fired)
+  Drying tray          planks - bamboo - planks          -> PBP (one row)
+  Rolling tray         planks - bamboo planks - planks   -> PBP (one row)
+  Charcoal stove       two rows of  planks - bamboo - planks  -> PBP / PBP
+  Tea wok              5 iron ingots in a V + 3 slabs below  -> I I / III / SSS
+  Clay kiln            8 bricks in a ring (hollow centre)
+  Potter's wheel       3 wooden slabs + 2 wooden fences     -> SSS / F F
+  Tea table            3 logs + 2 planks                    -> LLL / P P
+  Hot tea table        tea table + magma block              -> shapeless, irreversible
+  Tea chair            3 planks + 2 fences                  -> PPP / F F
+  Tea box              8 wooden slabs in a ring             -> SSS / S S / SSS
+  Tea tray             planks - bamboo slab - planks        -> PBP (one row)
+  Teapot (decorative)  NO crafting recipe - potter's wheel + kiln
+  Kettle               NO crafting recipe - potter's wheel + kiln
 
-  Exact shapes may differ slightly. Use the in-game recipe book for
-  the precise layout; the above is a quick reference.
+  Legend: P = any planks (#minecraft:planks), B = bamboo / bamboo planks /
+          bamboo slab, S = any wooden slab, I = iron ingot,
+          F = any fence, L = any log
+
+  Why the tea wok needs slabs and not just 5 iron ingots:
+    A plain 5-iron U shape (I I / III) is EXACTLY the vanilla minecart recipe.
+    When two recipes share a shape, only the minecart ever matches, so the wok
+    would be uncraftable. The extra slab row keeps them distinct.
+
+  The kettle and teapot are ceramics and are made via potter's wheel + kiln.
+  They intentionally have no crafting-table recipe.
 
 
 ================================================================================

@@ -898,3 +898,187 @@ Copy-Item 到 26.3 NeoForge 支，结果 NeoForge 支冒出 200 个编译错误
 恢复方法：workspace 里有各支的正确副本，可以从那里取回。
 
 ================================================================
+
+【31】纯逻辑不能放在客户端类里
+----------------------------------------------------------------
+
+现象：给茶树倒计时写了个格式化函数，放在 TeaTrayHud（客户端 HUD 类）里，
+自检想验证它，直接炸：
+
+  java.lang.RuntimeException:
+    Cannot load class net.minecraft.client.gui.GuiGraphicsExtractor
+    in environment type SERVER
+
+原因：加载 TeaTrayHud 会连带解析它的字段/方法签名里出现的客户端类型，
+而服务端环境里没有 GUI 类。
+
+修法：把纯逻辑抽到 core 包（TeaDurations），不 import 任何 client 类型。
+
+**教训**
+
+  ★ 判断标准很简单：这段逻辑需要 net.minecraft.client.* 吗？
+    不需要 → 放 core / core 包；需要 → 才放 client 包。
+  ★ 这不只是自检的问题：服务端加载客户端类是明确的架构错误，
+    只是平时被 try/catch 或懒加载掩盖了。
+
+
+【32】三支 useItemOn 的返回值不一样，PASS 常量名尤其坑
+----------------------------------------------------------------
+
+给茶树加「剪刀右键分枝」，三支写法不同：
+
+  26.3 (Fabric/NeoForge)
+    返回 InteractionResult
+    常量 InteractionResult.PASS / .SUCCESS
+
+  1.21.1 NeoForge
+    返回 net.minecraft.world.ItemInteractionResult
+    常量里【没有 PASS】，对应的是
+      PASS_TO_DEFAULT_BLOCK_INTERACTION
+    还有 CONSUME / CONSUME_PARTIAL / SKIP_DEFAULT_BLOCK_INTERACTION / FAIL
+
+  另外 1.21.1 没有 SoundEvents.SHEARS_SNIP，
+  换成 ITEM_BREAK 才能编译。
+
+**踩到的两个弯路**
+
+  1. 报错写「找不到符号 PASS」，而「位置: 类 ItemInteractionResult」——
+     我一开始以为是包名错了（net.minecraft.world 还是 .world.level），
+     改了半天包名。其实是类对了、字段名不对。
+     **看到「位置: 类 X」就说明类找到了，问题在成员名上。**
+
+  2. 用 PowerShell 的 -replace 修包名时，替换前后字符串写成了同一个，
+     等于没改，白折腾两轮。
+     **改字符串时先把 old/new 两个值各自打印出来比一眼。**
+
+**怎么快速确认枚举常量**
+
+  javap -classpath <merged.jar> net.minecraft.world.ItemInteractionResult
+
+  1.21.1 的 merged jar 在：
+    build/moddev/artifacts/neoforge-21.1.256-merged.jar
+
+
+【33】破坏性验证要小心「自己和自己比」的假绿
+----------------------------------------------------------------
+
+现象：分枝断言原本写成
+
+  check("branch_gives_two_seedlings",
+        gained == TeaBushBlock.BRANCH_SEEDLINGS, ...);
+
+做破坏性验证时把常量改成 1，断言期望值也跟着变成 1，
+结果【照样 PASS】—— 这条断言等于 `gained == gained`。
+
+修法：期望值写死。
+
+  check("branch_gives_two_seedlings", gained == 2, ...);
+
+**教训**
+
+  ★ 断言里不要引用「被测代码自己的常量」。
+    常量是 2 还是 1 都该由断言独立认定。
+  ★ 这类假绿只有做破坏性验证才能发现 —— 正常跑永远是绿的。
+
+
+【34】git 远程被 API 推送搞分叉后的清理
+----------------------------------------------------------------
+
+现象：网络不通时我用 Contents API 逐文件推，每个文件产生一个提交。
+网络恢复后 `git push` 报 rejected，`git rebase` 又冲突一堆。
+
+这次的处理办法（比较干净）：
+
+  1. 把工作区受控内容拷到临时目录（排除 .git）
+  2. git reset --hard origin/main
+  3. 把内容拷回去
+  4. git add -A && git commit && git push
+
+因为工程源码的真实来源是 D:\工程-茶工艺 下的各支目录，
+workspace 只是副本，所以重置不会丢东西。
+
+**教训**
+
+  ★ API 推文件会把历史搞成一堆碎提交，能用 git push 就别用 API。
+  ★ 非要用 API，尽量一次推一个提交里的全部文件，别分好几次。
+
+================================================================
+
+【35】自己写的配方会撞上原版配方 —— 形状冲突时静默失效
+----------------------------------------------------------------
+
+现象：
+  给炒茶锅设计「U 形 5 个铁锭」的配方（I I / III），
+  结果游戏里合出来的是【矿车】，炒茶锅永远合不出来。
+
+原因：
+  原版 minecart.json 的形状就是
+    "# #"
+    "###"     （5 个 iron_ingot）
+  和我的炒茶锅一字不差。同形状时配方匹配取第一个命中的，
+  原版配方优先，于是永远匹配到矿车。
+
+  最坑的地方：配方文件存在、JSON 合法、游戏不报任何错，
+  只是「合不出来」。自检若只查文件存在，就完全发现不了。
+
+修法：
+  底部再加一行木台阶（I I / III / SSS），与矿车彻底区分。
+
+教训：
+  ★ 设计任何配方前，先查原版有没有同形状的：
+      javap 或直接看 jar 里 data/minecraft/recipe/*.json
+  ★ 尤其小心「纯单一材料」的简单形状 —— 越简单越容易撞。
+    铁锭 U 形、木板一排、圆石一圈这类，原版几乎都有。
+  ★ 配方断言必须走 RecipeManager 实查，不能只查文件存在。
+
+
+【36】「只测了一条」的断言，等于没测
+----------------------------------------------------------------
+
+现象：
+  三支都缺「晒盘/揉茶匾/碳焙筐/炒锅」的配方文件，
+  1.21.1 还缺茶盘，但自检全绿。
+
+原因：
+  配方断言只写了一条 recipe_tea_set_matches，
+  其余 13 个方块从来没被测过。而且 1.21.1 支连这一条都没有。
+
+修法：
+  给 5 个有配方的方块各写一条断言，并且：
+    26.3 两支：走 RecipeManager 实查（真的能查出产物）
+    1.21.1  ：走 JSON 校验（该版本 RecipeManager API 差异大，风险高）
+
+教训：
+  ★ 一组同类物品，断言要覆盖「这一组」，不能只挑一个当样本。
+    挑样本时人总会挑「已经好的那个」。
+  ★ 更根本的检查：先列出「所有已注册方块」，再逐个比对有没有配方。
+    这个矩阵式对照比任何单点断言都可靠。
+
+
+【37】硬编码 json 内容的断言会随配方改版批量变红
+----------------------------------------------------------------
+
+现象：
+  改配方后一次性冒出 15 条失败：
+    recipe_tea_tray_pattern / _slab_tag / _bamboo
+    recipe_tea_set_pattern / ...（共 5 个方块 × 3 条）
+
+原因：
+  checkCraftingRecipeFor 里有一段把 tea_set 的 json 内容「再抄一遍」：
+    check(name+"_pattern",  "#B#".equals(pattern))
+    check(name+"_slab_tag", "#minecraft:wooden_slabs".equals(slabKey))
+    check(name+"_bamboo",   "minecraft:bamboo".equals(midKey))
+
+  这些断言的真实含义只是「json 文件里写的就是我期望的字符串」，
+  与其说是测试，不如说是把数据复制了一份 —— 数据一改就全红，
+  但并没有验证任何「行为」。
+
+修法：删掉，只保留 RecipeManager 实查（那才是真正的行为验证）。
+
+教训：
+  ★ 断言的目的是验证行为，不是复述数据。
+    「json 里有这个字符串」几乎总是弱断言。
+  ★ 如果一条断言在「需求变更」时必须改，它可能测的就不是需求。
+
+
+================================================================

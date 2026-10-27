@@ -351,3 +351,115 @@ D:\工程-茶工艺\tea-craft-neoforge-1.21.1\       1.21.1 NeoForge 版
   （tray_stops_when_raining_open_sky），理由写在代码注释里。
 
 ================================================================
+
+
+================================================================
+附录 G：茶树成熟系统（2026-10 重构）
+================================================================
+
+【G1】为什么茶树需要 BlockEntity
+----------------------------------------------------------------
+
+最初成熟完全靠计划刻：
+
+  level.scheduleTick(pos, this, growthTicks);   // 到期调 ripen()
+
+计划刻的问题：没法反查「这个坐标还有多少 tick 到期」。
+原版队列存在 LevelChunkTicks 里，没有对外查询接口，也没写进 BlockState。
+
+要显示倒计时 + 太冷暂停，就必须有个可读可写的剩余时间，
+所以茶树从普通 Block 改成 EntityBlock，新增 TeaBushBlockEntity：
+
+  remainingTicks / totalTicks / paused
+
+BlockState 只适合枚举值（age 0~3），放不下 24000×8 范围的计时器，
+而且每次变化都会引发区块重算形状。
+
+
+【G2】计时必须用 gameTime 差值，不能「每 N tick 减 1」
+----------------------------------------------------------------
+
+第一版（错的）：
+
+  // 每 20 tick 调一次
+  public boolean tickCountdown(boolean cold) {
+      if (cold) { paused = true; return false; }
+      remainingTicks--;
+      ...
+  }
+
+实际经过 144000 tick（6 游戏日），但代码只被调用 144000/20 = 7200 次，
+每次减 1 ⇒ 只推进 7200 tick。3 天成熟需要 72000 tick，只走了 10%。
+所以 /tick sprint 6D 之后茶树依然不成熟。
+
+第二版（对的）：记锚点，用差值。
+
+  private int totalTicks;      // 这一轮总共需要多少刻
+  private int elapsedTicks;    // 已累积（不含当前段）
+  private long anchor = -1L;   // 当前段起点 gameTime；-1 = 停表
+
+  public int remainingTicks(long now) {
+      int done = elapsedTicks;
+      if (anchor >= 0L && now > 0L) done += (int)(now - anchor);
+      return Math.max(0, totalTicks - done);
+  }
+
+  public boolean advanceTo(long now, boolean coldNow) {
+      if (coldNow) {
+          // 停表：把当前段结算进 elapsed
+          if (anchor >= 0L) { elapsedTicks += (int)(now - anchor); anchor = -1L; }
+          ...
+      } else {
+          if (anchor < 0L) anchor = now;   // 重新起表
+      }
+      ...
+  }
+
+这样进度严格等于「经过的游戏刻」，与 tick 速率无关，
+/tick sprint、/tick rate 都能加速。
+
+
+【G3】暂停语义
+----------------------------------------------------------------
+
+太冷时 remainingTicks 不清零，只是不再减少。
+恢复后从原值继续 —— 这是用户在需求里明确要求的。
+
+实现上就是 G2 的 anchor = -1 表示停表：
+暂停期间游戏刻照走，但 elapsedTicks 不增加。
+
+
+【G4】为什么格式化函数在 core 而不是 client
+----------------------------------------------------------------
+
+倒计时格式化原本写在 TeaTrayHud（客户端），自检调用时崩：
+
+  Cannot load class net.minecraft.client.gui.GuiGraphicsExtractor
+  in environment type SERVER
+
+加载客户端类会连带解析它签名里的客户端类型。
+所以纯逻辑抽到 core.TeaDurations，不 import 任何 client 类型。
+
+
+【G5】分支流程
+----------------------------------------------------------------
+
+  种下 onPlace
+    → startCountdown()：写 totalTicks / 清 elapsed / 锚点=now，排 20 tick 计划刻
+
+  tick() 每 20 tick
+    → be.advanceTo(level.getGameTime(), isTooCold())
+    → 到点则 ripen()（age = AGE_RIPE），否则继续排计划刻
+
+  空手右键（age 3）
+    → 采 1~3 片鲜叶（写入产地组件）
+    → setBlock(AGE_TREE) + startCountdown()   ← 退回成树，不是生长期
+
+  剪刀右键（age 3）
+    → 给 2 个茶树种 + 剪刀掉 1 耐久
+    → setBlock(AGE_YOUNG) + startCountdown()  ← 退回幼苗
+
+  随机刻（age < 2）
+    → 仿小麦概率成长，上限 AGE_TREE（骨粉催不出茶叶）
+
+================================================================

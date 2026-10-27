@@ -148,6 +148,7 @@ public final class TeaSelfCheck {
         climateChecks(server);
         trayChecks(server);
         creativeTabChecks();
+        recipeChecks();
 
         TeaCraft.LOGGER.info("[teacraft] ===== 自检结束 pass={} fail={} skip={} =====",
                 passed, failed, skipped);
@@ -156,6 +157,74 @@ public final class TeaSelfCheck {
             server.halt(false);
         }
     }
+
+    /* ================= 配方 ================= */
+
+    /**
+     * 检查工作方块的合成配方确实存在且形状正确。
+     *
+     * <h2>为什么需要这一组</h2>
+     * <p>本支原先<b>完全没有配方断言</b>，所以「茶盘没有合成配方」这个 bug
+     * 一直存在到用户实测才发现。缺配方时游戏不会报错 ——
+     * 创造栏里物品照样出现，只是工作台上合不出来。</p>
+     *
+     * <h2>这里只做 JSON 层校验</h2>
+     * <p>1.21.1 的 RecipeManager API 与 26.3 差异较大（CraftingInput、
+     * assemble 签名都不同），为降低跨版本风险，这里只验证：
+     * 文件存在 + 能解析 + pattern 行数与第一行内容符合预期。</p>
+     */
+    private static void recipeChecks() {
+        // 方块名 -> 期望的 pattern 首行
+        String[][] expect = {
+                {"tea_tray", "PBP"},
+                {"tea_rolling_tray", "PBP"},
+                {"tea_charcoal_stove", "PBP"},
+                {"tea_wok", "I I"},
+                {"tea_set", "PBP"},
+        };
+
+        for (String[] e : expect) {
+            String block = e[0];
+            String wantFirst = e[1];
+            String path = "data/" + NS + "/recipe/" + block + ".json";
+
+            JsonObject json = jsonAt(path);
+            check("recipe_" + block + "_exists", json != null,
+                    "缺少配方文件 " + path + "（工作台合不出来，创造栏却能看到物品）");
+            if (json == null) continue;
+
+            // pattern 存在且首行符合预期
+            String got = "";
+            if (json.has("pattern")) {
+                var arr = json.getAsJsonArray("pattern");
+                if (arr.size() > 0) got = arr.get(0).getAsString();
+            }
+            check("recipe_" + block + "_pattern", wantFirst.equals(got),
+                    "首行应为 [" + wantFirst + "]，实际 [" + got + "]");
+
+            // 必须有 result 且 result 指向本方块
+            String resultId = "";
+            if (json.has("result") && json.get("result").isJsonObject()) {
+                var r = json.getAsJsonObject("result");
+                if (r.has("id")) resultId = r.get("id").getAsString();
+            }
+            check("recipe_" + block + "_result",
+                    resultId.equals(NS + ":" + block),
+                    "产物应为 " + NS + ":" + block + "，实际 " + resultId);
+        }
+
+        // 炒茶锅不能与原版矿车形状重合，否则永远匹配到矿车
+        JsonObject wok = jsonAt("data/" + NS + "/recipe/tea_wok.json");
+        if (wok != null && wok.has("pattern")) {
+            var arr = wok.getAsJsonArray("pattern");
+            boolean isMinecartShape = arr.size() == 2
+                    && arr.get(0).getAsString().equals("I I")
+                    && arr.get(1).getAsString().equals("III");
+            check("recipe_tea_wok_not_minecart", !isMinecartShape,
+                    "炒茶锅形状不能和原版矿车相同（# # / ###），否则会匹配到矿车");
+        }
+    }
+
 
     /* ================= 茶树 ================= */
 
