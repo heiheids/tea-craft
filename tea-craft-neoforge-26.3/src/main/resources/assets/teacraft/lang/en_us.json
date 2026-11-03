@@ -113,6 +113,7 @@
   "teacraft.tooltip.potter_wheel": "§7Clay in, blanks out · 1 clay = cup, 2 = gaiwan, 4 = kettle",
   "teacraft.kiln.burning": "Firing",
   "teacraft.kiln.minutes_left": "%s min left",
+  "teacraft.kiln.ignite": "Start batch",
   "teacraft.kiln.time_left": "%s left",
   "teacraft.kiln.burning_minutes": "Firing · %s min left",
   "teacraft.kiln.no_blank": "No blanks (load them from an adjacent potter's wheel)",

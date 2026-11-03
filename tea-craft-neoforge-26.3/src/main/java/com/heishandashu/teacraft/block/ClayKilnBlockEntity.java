@@ -152,6 +152,8 @@ public class ClayKilnBlockEntity extends BlockEntity implements Container {
      * <p>「开始后一次性消耗掉 8 个」—— 这里直接扣，不等烧完。</p>
      */
     public boolean tryStartBurning() {
+        // Container synchronization also writes slots on the client. Only the server may ignite.
+        if (level == null || level.isClientSide()) return false;
         if (!hasEnoughFuel()) return false;
         // 已经有在烧的就不重复点火
         for (int i = 0; i < BLANK_COUNT; i++) {

@@ -113,6 +113,7 @@
   "teacraft.tooltip.potter_wheel": "§7放黏土做坯 · 1黏土=茶杯 2=盖碗 4=烧水壶",
   "teacraft.kiln.burning": "正在烧制",
   "teacraft.kiln.minutes_left": "还要 %s 分钟",
+  "teacraft.kiln.ignite": "开始烧制",
   "teacraft.kiln.time_left": "剩 %s",
   "teacraft.kiln.burning_minutes": "烧制中 · 还要 %s 分钟",
   "teacraft.kiln.no_blank": "没有坯料（需紧邻拉坯机送坯）",

@@ -4,6 +4,7 @@ import com.heishandashu.teacraft.block.ClayKilnBlockEntity;
 import com.heishandashu.teacraft.core.CeramicPatterns;
 import com.heishandashu.teacraft.menu.ClayKilnMenu;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -39,6 +40,7 @@ public class ClayKilnScreen extends AbstractContainerScreen<ClayKilnMenu> {
     private static final int ARROW_FG = 0xFFFFFFFF;
 
     private int hoveredCancel = -1;
+    private Button igniteButton;
 
     public ClayKilnScreen(ClayKilnMenu menu, Inventory inv, Component title) {
         super(menu, inv, title, PANEL_W, PANEL_H);
@@ -46,6 +48,31 @@ public class ClayKilnScreen extends AbstractContainerScreen<ClayKilnMenu> {
         this.titleLabelY = 6;
         this.inventoryLabelX = 8;
         this.inventoryLabelY = 114;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        igniteButton = addRenderableWidget(Button.builder(
+                Component.translatable("teacraft.kiln.ignite"), button -> {
+                    if (minecraft != null && minecraft.gameMode != null) {
+                        minecraft.gameMode.handleInventoryButtonClick(menu.containerId,
+                                ClayKilnMenu.BUTTON_IGNITE);
+                    }
+                }).bounds(leftPos + 94, topPos + 77, 74, 18).build());
+        updateIgniteButton();
+    }
+
+    @Override
+    protected void containerTick() {
+        super.containerTick();
+        updateIgniteButton();
+    }
+
+    private void updateIgniteButton() {
+        var kiln = menu.kiln();
+        igniteButton.active = kiln != null && menu.getSyncedRemainingTicks() == 0
+                && !menu.isSyncedBurning() && kiln.hasBlanks() && kiln.hasEnoughFuel();
     }
 
     @Override
@@ -100,8 +127,7 @@ public class ClayKilnScreen extends AbstractContainerScreen<ClayKilnMenu> {
     }
 
     private void drawFuelProgress(GuiGraphicsExtractor g) {
-        var kiln = this.menu.kiln();
-        boolean burning = kiln != null && kiln.isLit();
+        boolean burning = this.menu.getSyncedRemainingTicks() > 0;
         int x = this.leftPos;
         int y = this.topPos;
 
@@ -141,28 +167,18 @@ public class ClayKilnScreen extends AbstractContainerScreen<ClayKilnMenu> {
         var kiln = this.menu.kiln();
         if (kiln == null) return;
 
-        // 判定「在烧」用剩余 tick > 0，不再单独依赖 lit 那个 DataSlot。
-        //
-        // 两个槽分开同步时，只要有一个没拿到值（客户端侧初始是 0），
-        // 界面就会走进 else 分支、整块倒计时直接不画 —— 表现就是「倒计时没了」。
-        // 剩余 tick 本身就能说明在不在烧，少一个依赖就少一处出错。
-        // 取剩余时间：优先问方块实体，其次用菜单同步值。
-        //
-        // 客户端那份方块实体本身是有数据的（打开界面时 getUpdateTag 会写一次），
-        // 而且现在客户端也挂了 ticker 做本地递减，所以它是可靠的实时来源。
-        // 之前只信 DataSlot，一旦同步通道没把值送过来就是 0，界面判定"没在烧"，
-        // 整块倒计时都不画 —— 表现就是"完全没有数字"。
-        int leftTicks = kiln.remainingTicks();
-        if (leftTicks <= 0) leftTicks = this.menu.getSyncedRemainingTicks();
+        // The server menu is authoritative, including zero. A local countdown cannot start work.
+        int leftTicks = this.menu.getSyncedRemainingTicks();
 
         if (leftTicks > 0) {
-            // 烧制中：剩余时间紧贴在火焰图标右侧（火焰在 50~64，留 4px 间隙）
             Component left = Component.translatable("teacraft.kiln.time_left",
                     clockText(leftTicks));
-            g.text(this.font, left, 68, 78, 0xFFD06000);
+            g.text(this.font, left, 68, 100, 0xFFD06000);
         } else {
-            // 没在烧：状态说明放在燃料槽下方那行空白里
-            g.text(this.font, kiln.statusText(), 8, 96, 0xFF404040);
+            Component status = !kiln.hasBlanks() ? Component.translatable("teacraft.kiln.no_blank")
+                    : !kiln.hasEnoughFuel() ? Component.translatable("teacraft.kiln.need_fuel", ClayKilnBlockEntity.FUEL_PER_BURN)
+                    : Component.translatable("teacraft.kiln.ready");
+            g.text(this.font, status, 8, 100, 0xFF404040);
         }
     }
 
