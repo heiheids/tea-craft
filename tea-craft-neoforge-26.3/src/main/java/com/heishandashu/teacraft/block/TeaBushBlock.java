@@ -345,7 +345,8 @@ public class TeaBushBlock extends Block implements BonemealableBlock,
                                           Player player, net.minecraft.world.InteractionHand hand,
                                           BlockHitResult hit) {
         if (!stack.is(net.minecraft.world.item.Items.SHEARS)) {
-            return InteractionResult.PASS;
+            // Empty hands also enter useItemOn; allow dispatch to reach useWithoutItem.
+            return InteractionResult.TRY_WITH_EMPTY_HAND;
         }
         if (state.getValue(AGE) != AGE_RIPE) {
             if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer sp) {
